@@ -1,0 +1,9 @@
+nltk
+torch
+pytorch_pretrained_bert
+scipy
+scikit-learn
+numpy
+python-dotenv
+
+-e git+git://github.com/artreven/fca.git#egg=fca
