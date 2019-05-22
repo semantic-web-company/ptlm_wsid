@@ -1,6 +1,7 @@
 import logging
 import re
 from typing import List, Tuple
+import os
 
 import torch
 from nltk import sent_tokenize
@@ -11,11 +12,10 @@ from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
-bert_model_str = 'bert-base-uncased'  # 'bert-base-uncased', 'bert-base-multilingual-cased'
+bert_model_str = os.getenv('BERT_MODEL', value='bert-base-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-cased'
 tokenizer = BertTokenizer.from_pretrained(bert_model_str)
 model = BertForMaskedLM.from_pretrained(bert_model_str)
 model.eval()
-outfolder_path = '/home/revenkoa/local_data/thesaural_wsi-master'
 
 word_embeddings = model.bert.embeddings.word_embeddings
 
