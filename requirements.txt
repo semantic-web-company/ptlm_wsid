@@ -7,4 +7,4 @@ numpy
 python-dotenv
 pbr
 
--e git+git://github.com/artreven/fca.git#egg=fca
+-e git+git://github.com/artreven/fca.git#egg=fca_new-0.0.2
