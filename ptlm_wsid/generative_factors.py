@@ -12,13 +12,11 @@ logger = logging.getLogger(__name__)
 def fca_cluster(doc2preds):
     def get_cxt():
         intents = []
-        i2docname = dict()
         objs = []
         for i, (docname, preds) in enumerate(doc2preds.items()):
             preds = set(preds)
             intents.append(preds)
             objs.append(docname)
-            i2docname[i] = docname
         atts = list({x for intent in intents for x in intent})
         table = [[att in intent for att in atts] for intent in intents]
         cxt = fca.Context(cross_table=table, objects=objs, attributes=atts)
@@ -47,7 +45,6 @@ def fca_cluster(doc2preds):
         sense_ids = sorted(term_rank, key=lambda x: term_rank[x])[:5]
         sense = fca.Concept(docs, set(sense_ids))
         return sense
-
 
     cxt = get_cxt()
     cxt = filter_cxt(cxt)
@@ -98,12 +95,12 @@ def fca_cluster(doc2preds):
 
 
 def induce(contexts, target_start_end_tuples, top_n_pred=100):
-    predicted = []
+    predicted = dict()
     for i, (text_cxt, target_start_end) in enumerate(zip(contexts,
                                                target_start_end_tuples)):
         cxt = tc.TargetContext(text_cxt, target_start_end)
         top_pred = cxt.get_topn_predictions(top_n=top_n_pred)
-        predicted.append(top_pred)
+        predicted[i] = top_pred
     senses = fca_cluster(predicted)
     return senses
 
