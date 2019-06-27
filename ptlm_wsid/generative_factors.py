@@ -4,7 +4,7 @@ import numpy as np
 
 import fca
 import fca.algorithms
-import target_context as tc
+import ptlm_wsid.target_context as tc
 
 logger = logging.getLogger(__name__)
 
