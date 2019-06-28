@@ -81,6 +81,7 @@ def fca_cluster(doc2preds):
                     max(overlap, default=0) < 0.5:
                 new_sense = get_sense(factor)
                 if any(new_sense.intent & s.intent for s in chosen_senses):
+                    logger.debug(f'OVerlap in sense. new intent: {new_sense.intent}.')
                     continue
                 logger.debug('Senser added.')
                 chosen_factors.append(factor)
@@ -94,13 +95,17 @@ def fca_cluster(doc2preds):
     return chosen_senses
 
 
-def induce(contexts, target_start_end_tuples, top_n_pred=100):
+def induce(contexts, target_start_end_tuples, top_n_pred=100, titles=None):
     predicted = dict()
     for i, (text_cxt, target_start_end) in enumerate(zip(contexts,
                                                target_start_end_tuples)):
         cxt = tc.TargetContext(text_cxt, target_start_end)
         top_pred = cxt.get_topn_predictions(top_n=top_n_pred)
-        predicted[i] = top_pred
+        if titles:
+            doc_title = titles[i]
+        else:
+            doc_title = i
+        predicted[doc_title] = top_pred
     senses = fca_cluster(predicted)
     return senses
 

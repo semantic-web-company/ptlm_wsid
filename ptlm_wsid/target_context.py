@@ -5,13 +5,9 @@ from typing import List, Tuple
 import os
 
 import torch
-from torch.nn.functional import softmax
-from nltk import sent_tokenize, word_tokenize, pos_tag, map_tag
+from nltk import sent_tokenize, word_tokenize, pos_tag
 from nltk.corpus import stopwords
-from scipy.special import expit
 from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet as wn
-
 from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM
 
 lemmatizer = WordNetLemmatizer()
@@ -201,12 +197,6 @@ class Document:
                     target_cxts.append((target_sents, match_start_end))
                     break
         return target_cxts
-
-if False:
-    from target_context import SubstituteTargetContext, bert_predict_top_n
-    sent = 'The Americano is 1 ounce of Campari, 1 ounce of sweet vermouth, topped off with soda water and a twist of lemon (or, my preference, an orange slice.)'
-    stc = SubstituteTargetContext(context=sent, target_start_end_inds=(4, 13))
-    toks, (start, end) = stc.tokenize()
 
 ##################################################
 # def sense_similarities(senses, targets):
