@@ -95,14 +95,15 @@ def fca_cluster(doc2preds, n_sense_indicators=5):
     return chosen_senses
 
 
-def induce(contexts, target_start_end_tuples, top_n_pred=100, titles=None):
+def induce(contexts, target_start_end_tuples, top_n_pred=100,
+           titles=None, n_sense_indicators=5):
     predicted = dict()
     for i, (text_cxt, target_start_end) in enumerate(zip(contexts,
                                                target_start_end_tuples)):
         cxt = tc.TargetContext(text_cxt, target_start_end)
         top_pred = cxt.get_topn_predictions(top_n=top_n_pred)
         predicted[titles[i] if titles else i] = top_pred
-    senses = fca_cluster(predicted)
+    senses = fca_cluster(predicted, n_sense_indicators=n_sense_indicators)
     return senses
 
 
