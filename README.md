@@ -1,20 +1,14 @@
-# Example:
-```
-import target_context as tc
-import cluster
+# Pretrained Language Model for WSID
 
-top_n = 100
-predicted = dict()
-for sents, target_label in corpus:
-    cxt = tc.SubstituteTargetContext(sents, target_label)
-    top_pred, top_logit_scores = cxt.get_topn_predictions(top_n=top_n)
-    predicted[doc.name] = top_pred
-clusters = cluster.fca_cluster(predicted, target_label)
-```
+In induction step the service takes a list of context and target in them (specified by a list of `(start_index, end_index)` tuples).
+The service uses pretrained language model ([BERT](https://github.com/google-research/bert)) to get predictions of possible substitutes for the target word. Next the service clusters the obtained substitutes using [FCA](https://www.upriss.org.uk/fca/fca.html).  
+Namely, we use Algorithm 2 from https://doi.org/10.1016/j.jcss.2009.05.002 to obtain the binary factors and filter the clusters to obtain the senses.
 
-# TODOs:
+# Deployment
 
-- [ ] Implement the function to decide if category is relevant to `broader="cocktail"` or not in `main`
-- [ ] Implement disambiguation: get substitutes and count how many belong to each induced cluster. normalize over cluster size.
-- [ ] Implement disambiguation without clusters: provide sense indicators and check its probability. take maximum and compare to the most probably substitute
-- [ ] Benchmark on cocktails
+do 
+
+```RUN python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet -d /wsid_web_service/nltk```
+
+to install the necessary nltk data.
+

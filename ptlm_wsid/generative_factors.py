@@ -9,7 +9,7 @@ import ptlm_wsid.target_context as tc
 logger = logging.getLogger(__name__)
 
 
-def fca_cluster(doc2preds):
+def fca_cluster(doc2preds, n_sense_indicators=5):
     def get_cxt():
         intents = []
         objs = []
@@ -42,7 +42,7 @@ def fca_cluster(doc2preds):
         common_terms = factor.intent
         for term in common_terms:
             term_rank[term] = sum(doc2preds[doc].index(term) for doc in docs)
-        sense_ids = sorted(term_rank, key=lambda x: term_rank[x])[:5]
+        sense_ids = sorted(term_rank, key=lambda x: term_rank[x])[:n_sense_indicators]
         sense = fca.Concept(docs, set(sense_ids))
         return sense
 
