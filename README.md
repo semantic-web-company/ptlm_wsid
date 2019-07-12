@@ -12,3 +12,7 @@ do
 
 to install the necessary nltk data.
 
+## TODO
+
+- [x] Only load model upon request
+

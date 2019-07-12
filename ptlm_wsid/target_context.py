@@ -15,10 +15,17 @@ lemmatizer = WordNetLemmatizer()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-bert_model_str = os.getenv('BERT_MODEL', default='bert-base-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-uncased'
-bert_tok = BertTokenizer.from_pretrained(bert_model_str)
-bert = BertForMaskedLM.from_pretrained(bert_model_str)
-bert.eval()
+bert_tok = None
+bert = None
+
+
+def load_bert():
+    if bert is None:
+        bert_model_str = os.getenv('BERT_MODEL', default='bert-base-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-uncased'
+        global bert_tok, bert
+        bert_tok = BertTokenizer.from_pretrained(bert_model_str)
+        bert = BertForMaskedLM.from_pretrained(bert_model_str)
+        bert.eval()
 
 
 class TargetContext:
@@ -26,6 +33,7 @@ class TargetContext:
 
     def __init__(self, context:str, target_start_end_inds:Tuple[int, int],
                  sent_tokenizer=sent_tokenize):
+        load_bert()
         self.context = context
         self.target_start_end_inds = target_start_end_inds
         self.sent_tokenizer = sent_tokenizer
