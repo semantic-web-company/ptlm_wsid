@@ -15,14 +15,15 @@ lemmatizer = WordNetLemmatizer()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+global bert_tok, bert
 bert_tok = None
 bert = None
 
 
 def load_bert():
+    global bert_tok, bert
     if bert is None:
         bert_model_str = os.getenv('BERT_MODEL', default='bert-base-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-uncased'
-        global bert_tok, bert
         bert_tok = BertTokenizer.from_pretrained(bert_model_str)
         bert = BertForMaskedLM.from_pretrained(bert_model_str)
         bert.eval()
