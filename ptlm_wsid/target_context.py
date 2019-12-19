@@ -5,6 +5,7 @@ from typing import List, Tuple
 import os
 
 import torch
+import spacy
 from nltk import sent_tokenize, word_tokenize, pos_tag
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -136,15 +137,34 @@ class TargetContext:
         return ans
 
     def get_topn_predictions(self, top_n=10, lang='eng',
-                             stopword_lang='english', target_pos='NN',
+                             stopword_lang='english', target_pos=None,
                              do_mask=True):
-        lem_pos = {'N': NOUN, 'NN': NOUN,
+        lem_pos = {'N': NOUN, 'NN': NOUN, 'NOUN': NOUN, 'PRON': NOUN,
+                   'PROPN': NOUN, None: NOUN,
                    'J': ADJ, 'JJ': ADJ, 'ADJ': ADJ, 'A': ADJ,
-                   'R': ADV,
+                   'R': ADV, 'ADV': ADV,
                    'V': VERB, 'VERB': VERB}
+        if lang.startswith('de'):
+            nlp = spacy.load('de_core_news_sm')
+        elif lang.startswith('en'):
+            nlp = spacy.load('en_core_web_sm')
+        elif lang.startswith('nl'):
+            nlp = spacy.load('nl_core_news_sm')
+        elif lang.startswith('es') or lang.startswith('sp'):
+            nlp = spacy.load('es_core_news_sm')
+        else:
+            assert 0, 'Only en, de, nl and es languages are supported so far.'
+
+        if target_pos is None:
+            doc = nlp(self.context)
+            for doc_tok in doc:
+                if str(doc_tok.text) == self.target_str:
+                    target_pos = str(doc_tok.pos_)
+                    break
+
         pred = self.pred(do_mask=do_mask)
         top_predicted = torch.argsort(pred, descending=True)
-        top_predicted = top_predicted.tolist()
+        top_predicted = top_predicted.tolist()[0]
         predicted_tokens = bert_tok.convert_ids_to_tokens(top_predicted)
 
         stopwords_set = set(stopwords.words(stopword_lang))
@@ -156,15 +176,18 @@ class TargetContext:
             else:
                 cxt_with_token = self.context[:self.target_start] + \
                                  f' {token} ' + self.context[self.target_end:]
-                cxt_toks = word_tokenize(text=cxt_with_token)
-                toks_pos = pos_tag(cxt_toks, lang=lang)
-                for tok, pos in toks_pos:
+                doc = nlp(cxt_with_token)
+
+                for doc_token in doc:
+                    tok = str(doc_token.text)
+                    pos = str(doc_token.pos_)
                     if tok == token:
                         token_pos = pos
                         break
                 else:
                     token_pos = target_pos
-                if token_pos.startswith(target_pos):
+
+                if target_pos is None or token_pos.startswith(target_pos):
                     token = lemmatizer.lemmatize(token, lem_pos[target_pos])
                     topn_pred.append(token)
                     if len(topn_pred) >= top_n:
