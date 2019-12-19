@@ -136,12 +136,13 @@ class TargetContext:
         return ans
 
     def get_topn_predictions(self, top_n=10, lang='eng',
-                             stopword_lang='english', target_pos='NN'):
+                             stopword_lang='english', target_pos='NN',
+                             do_mask=True):
         lem_pos = {'N': NOUN, 'NN': NOUN,
                    'J': ADJ, 'JJ': ADJ, 'ADJ': ADJ, 'A': ADJ,
                    'R': ADV,
                    'V': VERB, 'VERB': VERB}
-        pred = self.pred
+        pred = self.pred(do_mask=do_mask)
         top_predicted = torch.argsort(pred, descending=True)
         top_predicted = top_predicted.tolist()
         predicted_tokens = bert_tok.convert_ids_to_tokens(top_predicted)
