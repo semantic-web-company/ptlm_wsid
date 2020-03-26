@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from functools import lru_cache
 from typing import List, Tuple
 import os
@@ -15,17 +16,41 @@ from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM
 lemmatizer = WordNetLemmatizer()
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 global bert_tok, bert
 bert_tok = None
 bert = None
 
 
+class LazySpacyDict(dict):
+    def __getitem__(self, item):
+        if item.startswith('de') or item.startswith('ge'):
+            if 'de' not in self:
+                self['de'] = spacy.load('de_core_news_sm')
+            return self.get('de'), 'german'
+        elif item.startswith('en'):
+            if 'en' not in self:
+                self['en'] = spacy.load('en_core_web_sm')
+            return self.get('en'), 'english'
+        elif item.startswith('nl'):
+            if 'nl' not in self:
+                self['nl'] = spacy.load('nl_core_news_sm')
+            return self.get('nl'), 'dutch'
+        elif item.startswith('es') or item.startswith('sp'):
+            if 'es' not in self:
+                self['es'] = spacy.load('es_core_news_sm')
+            return self.get('es'), 'spanish'
+        else:
+            assert 0, 'Only en, de, nl and es languages are supported so far.'
+
+
+nlp_dict = LazySpacyDict()
+
+
 def load_bert():
     global bert_tok, bert
     if bert is None:
-        bert_model_str = os.getenv('BERT_MODEL', default='bert-base-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-uncased'
+        bert_model_str = os.getenv('BERT_MODEL', default='bert-base-multilingual-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-uncased'
         bert_tok = BertTokenizer.from_pretrained(bert_model_str)
         bert = BertForMaskedLM.from_pretrained(bert_model_str)
         bert.eval()
@@ -36,6 +61,7 @@ class TargetContext:
 
     def __init__(self, context:str, target_start_end_inds:Tuple[int, int],
                  sent_tokenizer=sent_tokenize):
+        # TODO: add language?
         load_bert()
         self.context = context
         self.target_start_end_inds = target_start_end_inds
@@ -50,6 +76,7 @@ class TargetContext:
     def pred(self, do_mask=True):
         if do_mask not in self._pred:
             tokenized = self.tokenized(do_mask=do_mask)
+            logger.debug(f'Tokens: {tokenized}, mask: {do_mask}')
             if not do_mask and \
                     self.target_indices[1] - self.target_indices[0] > 1:
                 tokenized[self.target_indices[0]+1:self.target_indices[1]] = []
@@ -57,7 +84,7 @@ class TargetContext:
             tks_tensor = torch.tensor([bert_tok.convert_tokens_to_ids(tokenized)])
             with torch.no_grad():
                 predictions = bert(tks_tensor)
-            self._pred = predictions[0, self.target_indices[0]]
+            self._pred[do_mask] = predictions[0, self.target_indices[0]]
         return self._pred[do_mask]
 
     @staticmethod
@@ -117,8 +144,9 @@ class TargetContext:
             tokenized = self.crop(tokens=tokenized,
                                   target_index=target_ind)
             if not do_mask:
-                target_toks = bert_tok.tokenize(target_str)
+                target_toks = bert_tok.tokenize(self.target_str)
                 tokenized[target_ind:target_ind+1] = target_toks
+                assert self.MASK not in tokenized
                 target_inds = [target_ind, target_ind+len(target_toks)]
             else:
                 target_inds = [target_ind, target_ind+1]
@@ -137,59 +165,57 @@ class TargetContext:
         return ans
 
     def get_topn_predictions(self, top_n=10, lang='eng',
-                             stopword_lang='english', target_pos=None,
-                             do_mask=True):
+                             target_pos=None, do_mask=True):
         lem_pos = {'N': NOUN, 'NN': NOUN, 'NOUN': NOUN, 'PRON': NOUN,
                    'PROPN': NOUN, None: NOUN,
                    'J': ADJ, 'JJ': ADJ, 'ADJ': ADJ, 'A': ADJ,
                    'R': ADV, 'ADV': ADV,
-                   'V': VERB, 'VERB': VERB}
-        if lang.startswith('de'):
-            nlp = spacy.load('de_core_news_sm')
-        elif lang.startswith('en'):
-            nlp = spacy.load('en_core_web_sm')
-        elif lang.startswith('nl'):
-            nlp = spacy.load('nl_core_news_sm')
-        elif lang.startswith('es') or lang.startswith('sp'):
-            nlp = spacy.load('es_core_news_sm')
-        else:
-            assert 0, 'Only en, de, nl and es languages are supported so far.'
+                   'V': VERB, 'VERB': VERB,
+                   'X': NOUN}
+        lem_pos.setdefault(NOUN)
+        global nlp_dict
+        nlp, stopword_lang = nlp_dict[lang]
 
         if target_pos is None:
             doc = nlp(self.context)
             for doc_tok in doc:
                 if str(doc_tok.text) == self.target_str:
-                    target_pos = str(doc_tok.pos_)
+                    target_pos = str(doc_tok.tag_)
                     break
 
         pred = self.pred(do_mask=do_mask)
         top_predicted = torch.argsort(pred, descending=True)
-        top_predicted = top_predicted.tolist()[0]
+        top_predicted = top_predicted.tolist()
         predicted_tokens = bert_tok.convert_ids_to_tokens(top_predicted)
 
         stopwords_set = set(stopwords.words(stopword_lang))
         topn_pred = []
-        for i, token in enumerate(predicted_tokens):
-            if len(token) < 3 or token.lower() in stopwords_set or \
-                    token.startswith('##'):
+        predicted_token_index = None
+        for i, predicted_token in enumerate(predicted_tokens):
+            if len(predicted_token) < 3 or predicted_token.lower() in stopwords_set or \
+                    predicted_token.startswith('##'):
                 pass
             else:
                 cxt_with_token = self.context[:self.target_start] + \
-                                 f' {token} ' + self.context[self.target_end:]
+                                 f' {predicted_token} ' + self.context[self.target_end:]
+                t_start = time.time()
                 doc = nlp(cxt_with_token)
+                logger.debug(f'spacy took {time.time() - t_start:.3f} s.')
 
-                for doc_token in doc:
-                    tok = str(doc_token.text)
-                    pos = str(doc_token.pos_)
-                    if tok == token:
-                        token_pos = pos
-                        break
+                if predicted_token_index is None:
+                    for i, doc_token in enumerate(doc):
+                        if str(doc_token.text) == predicted_token:
+                            predicted_token_index = i
+                            token_pos = doc_token.tag_
+                            break
+                    else:
+                        token_pos = target_pos
                 else:
-                    token_pos = target_pos
+                    token_pos = str(doc[predicted_token_index].tag_)
 
                 if target_pos is None or token_pos.startswith(target_pos):
-                    token = lemmatizer.lemmatize(token, lem_pos[target_pos])
-                    topn_pred.append(token)
+                    predicted_token = lemmatizer.lemmatize(predicted_token, lem_pos[target_pos])
+                    topn_pred.append(predicted_token)
                     if len(topn_pred) >= top_n:
                         break
         return topn_pred

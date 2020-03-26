@@ -1,4 +1,5 @@
 import logging
+from typing import Dict
 
 import numpy as np
 
@@ -9,7 +10,7 @@ import ptlm_wsid.target_context as tc
 logger = logging.getLogger(__name__)
 
 
-def fca_cluster(doc2preds, n_sense_indicators=5):
+def fca_cluster(doc2preds: Dict[str, list], n_sense_indicators=5):
     def get_cxt():
         intents = []
         objs = []
@@ -26,7 +27,8 @@ def fca_cluster(doc2preds, n_sense_indicators=5):
         # Remove infrequent attributes from the context to speed up the computations
         logger.debug(f'Original number of attributes: {len(cxt.attributes)}')
         att_del = []
-        att_th = max(3, np.log10(len(cxt.objects)))
+        # att_th = max(3, np.log10(len(cxt.objects)))
+        att_th = np.log10(len(cxt.objects)) + 1
         logger.debug(f'Att extent threshold: {att_th}')
         for att in cxt.attributes:
             if len(cxt.get_attribute_extent(att)) < att_th:
@@ -96,13 +98,17 @@ def fca_cluster(doc2preds, n_sense_indicators=5):
 
 
 def induce(contexts, target_start_end_tuples, top_n_pred=100,
-           titles=None, n_sense_indicators=5, target_pos='NN'):
+           titles=None, n_sense_indicators=5, target_pos=None, lang='eng',
+           do_mask=True):
     predicted = dict()
     for i, (text_cxt, target_start_end) in enumerate(zip(contexts,
                                                target_start_end_tuples)):
+        logger.debug(f'Context {i} of {len(contexts)}: ' + text_cxt)
         cxt = tc.TargetContext(text_cxt, target_start_end)
         top_pred = cxt.get_topn_predictions(top_n=top_n_pred,
-                                            target_pos=target_pos)
+                                            target_pos=target_pos,
+                                            lang=lang,
+                                            do_mask=do_mask)
         predicted[titles[i] if titles else i] = top_pred
     senses = fca_cluster(predicted, n_sense_indicators=n_sense_indicators)
     return senses
