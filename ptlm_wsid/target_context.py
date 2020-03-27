@@ -141,8 +141,8 @@ class TargetContext:
             target_ind = tokenized.index(target_str)
             if tokenized[target_ind - 1] in ['a', 'an']:
                 del tokenized[target_ind - 1]
-            tokenized = self.crop(tokens=tokenized,
-                                  target_index=target_ind)
+            tokenized, target_ind = self.crop(tokens=tokenized,
+                                              target_index=target_ind)
             if not do_mask:
                 target_toks = bert_tok.tokenize(self.target_str)
                 tokenized[target_ind:target_ind+1] = target_toks
@@ -162,7 +162,8 @@ class TargetContext:
             start_ind = max(0, int(target_index - token_limit / 2))
             end_ind = min(len(ans), int(target_index + token_limit / 2))
             ans = ans[start_ind:end_ind]
-        return ans
+            target_index = target_index - start_ind
+        return ans, target_index
 
     def get_topn_predictions(self, top_n=10, lang='eng',
                              target_pos=None, do_mask=True):
