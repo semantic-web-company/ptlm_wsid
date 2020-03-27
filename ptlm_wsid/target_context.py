@@ -156,7 +156,7 @@ class TargetContext:
         return self._tokenized[do_mask]
 
     @staticmethod
-    def crop(tokens, target_index, token_limit=510):
+    def crop(tokens, target_index, token_limit=300):
         ans = tokens
         if len(ans) > token_limit:
             start_ind = max(0, int(target_index - token_limit / 2))
