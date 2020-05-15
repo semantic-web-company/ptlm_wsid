@@ -184,7 +184,7 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
+#.env
 .venv
 env/
 venv/
@@ -215,6 +215,11 @@ dmypy.json
 /ptlm_wsid/scode.py
 /ptlm_wsid/main.py
 /ptlm_wsid/ler.py
+/ptlm_wsid/moabit.py
+/ptlm_wsid/factors.py
 /ptlm_wsid/ler100.cxt
 /ptlm_wsid/factors.txt
 *__pycache__*
+/ptlm_wsid/ners*
+/ptlm_wsid/*.tsv
+/ptlm_wsid/geo*

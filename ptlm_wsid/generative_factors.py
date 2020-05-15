@@ -1,5 +1,7 @@
 import logging
-from typing import Dict
+import time
+from collections import Counter
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -10,7 +12,8 @@ import ptlm_wsid.target_context as tc
 logger = logging.getLogger(__name__)
 
 
-def fca_cluster(doc2preds: Dict[str, list], n_sense_indicators=5):
+def fca_cluster(doc2preds: Dict[str, List[str]],
+                n_sense_indicators=5) -> List[fca.Concept]:
     def get_cxt():
         intents = []
         objs = []
@@ -97,28 +100,61 @@ def fca_cluster(doc2preds: Dict[str, list], n_sense_indicators=5):
     return chosen_senses
 
 
-def induce(contexts, target_start_end_tuples, top_n_pred=100,
-           titles=None, n_sense_indicators=5, target_pos=None, lang='eng',
-           do_mask=True):
+def induce(contexts: List[str],
+           target_start_end_tuples: List[Tuple[int, int]],
+           titles: List[str] = None,
+           target_pos: str = None,
+           n_sense_indicators=5, lang='eng', do_mask=True, top_n_pred=100,
+           min_number_contexts_for_fca_clustering=3) -> List[fca.Concept]:
+    """
+    The function induces sense(s) of the target from a collection of contexts.
+    This function always returns a result. If the proper clustering does not
+    produce any factors then the most common predictions are output.
+
+    :param contexts: the contexts themselves
+    :param target_start_end_tuples: the (start index, end index) pairs
+        indicating the target in the respective context.
+        len(contexts) == len(target_start_end_tuples)
+    :param top_n_pred: how many predictions are produced for each context
+    :param titles: Titles of contexts
+    :param n_sense_indicators: how many sense indicators - subset of all
+        predictions - are output for each sense
+    :param target_pos: the desired part of speach of predictions
+    :param lang: language. Used for POS tagging and lemmatization of predictions
+    :param do_mask: if the target should be masked during predicting
+    :param min_number_contexts_for_fca_clustering: minimum numbder of contexts
+        to try the fca clustering. If there are only 1 or 2 then it often does
+        not make sense to cluster.
+    """
+    if not len(contexts) == len(target_start_end_tuples):
+        raise ValueError(f'Length of contexts {len(contexts)} is not equal to '
+                         f'the length of start and end indices list '
+                         f'{len(target_start_end_tuples)}.')
     predicted = dict()
+    senses = []
     for i, (text_cxt, target_start_end) in enumerate(zip(contexts,
                                                target_start_end_tuples)):
-        logger.debug(f'Context {i} of {len(contexts)}: ' + text_cxt)
         cxt = tc.TargetContext(text_cxt, target_start_end)
+        start_t = time.time()
         top_pred = cxt.get_topn_predictions(top_n=top_n_pred,
                                             target_pos=target_pos,
                                             lang=lang,
                                             do_mask=do_mask)
-        predicted[titles[i] if titles else i] = top_pred
-    senses = fca_cluster(predicted, n_sense_indicators=n_sense_indicators)
+        predicted[titles[i] if (titles and len(titles) >= i) else i] = top_pred
+        logger.debug(f'Predictions took {time.time()-start_t:0.3f}')
+        if len(contexts) > min_number_contexts_for_fca_clustering:
+            logger.debug(f'fca_cluster produced {len(senses)} senses.')
+            senses = fca_cluster(predicted,
+                                 n_sense_indicators=n_sense_indicators)
+    if not senses:  # fca_cluster did not produce results
+        all_predicted = sum(predicted.values(), [])
+        top_predicted = [x[0] for x in Counter(all_predicted).most_common(
+            n_sense_indicators)]
+        senses = [fca.Concept(intent=top_predicted,
+                              extent=list(predicted.keys()))]
+        logger.debug(f'Most common predictions are taken as sense indicators.')
     return senses
 
 
 if __name__ == '__main__':
-    import context_embeddings as ce
-    top_n_pred = 25
-    for text, se in zip(ce.texts, ce.ses):
-        tcxt = tc.TargetContext(text, se)
-        top_pred = tcxt.get_topn_predictions(top_n=25)
-        print(text)
-        print(top_pred)
+    pass

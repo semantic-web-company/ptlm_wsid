@@ -1,10 +1,8 @@
 nltk
 torch
+spacy
 pytorch_pretrained_bert
-scipy
-scikit-learn
 numpy
 python-dotenv
-pbr
 
 fca @ git+git://github.com/artreven/fca.git#egg=fca

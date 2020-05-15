@@ -7,7 +7,8 @@ import os
 
 import torch
 import spacy
-from nltk import sent_tokenize, word_tokenize, pos_tag
+from nltk import sent_tokenize
+from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus.reader.wordnet import NOUN, VERB, ADJ, ADV
@@ -23,6 +24,10 @@ bert = None
 
 
 class LazySpacyDict(dict):
+    """
+    Load spacy nlp model when it is requested for the first time. Next time
+    return the loaded model.
+    """
     def __getitem__(self, item):
         if item.startswith('de') or item.startswith('ge'):
             if 'de' not in self:
@@ -48,6 +53,10 @@ nlp_dict = LazySpacyDict()
 
 
 def load_bert():
+    """
+    This function loads bert model and populates the global variable. This way
+    we know only one BERT is loaded.
+    """
     global bert_tok, bert
     if bert is None:
         bert_model_str = os.getenv('BERT_MODEL', default='bert-base-multilingual-uncased')  # 'bert-base-uncased', 'bert-base-multilingual-uncased'
@@ -61,6 +70,13 @@ class TargetContext:
 
     def __init__(self, context:str, target_start_end_inds:Tuple[int, int],
                  sent_tokenizer=sent_tokenize):
+        """
+
+        :param context: the context string
+        :param target_start_end_inds: the start and end indices of the target in
+             the context string
+        :param sent_tokenizer: used to split the context into sentences
+        """
         # TODO: add language?
         load_bert()
         self.context = context
@@ -166,8 +182,18 @@ class TargetContext:
         return ans, target_index
 
     def get_topn_predictions(self, top_n=10, lang='eng',
-                             target_pos=None, do_mask=True):
+                             target_pos: str = None, do_mask=True) -> List[str]:
+        """
+
+        :param top_n: number of top predictions in the output
+        :param lang: language iso 3 letter code
+        :param target_pos: the desired POS tag of the prediction. 'N', 'J', etc.
+        :param do_mask: if the target word should be masked during predictions.
+        :return: list of top_n predictions
+        """
+        t_start_function = time.time()
         lem_pos = {'N': NOUN, 'NN': NOUN, 'NOUN': NOUN, 'PRON': NOUN,
+                   'NNP': NOUN,
                    'PROPN': NOUN, None: NOUN,
                    'J': ADJ, 'JJ': ADJ, 'ADJ': ADJ, 'A': ADJ,
                    'R': ADV, 'ADV': ADV,
@@ -188,41 +214,70 @@ class TargetContext:
         top_predicted = torch.argsort(pred, descending=True)
         top_predicted = top_predicted.tolist()
         predicted_tokens = bert_tok.convert_ids_to_tokens(top_predicted)
+        logger.debug(f'Generation of predictions and their formatting took '
+                     f'{time.time() - t_start_function:.3f} s.')
 
         stopwords_set = set(stopwords.words(stopword_lang))
         topn_pred = []
         predicted_token_index = None
+        logger.debug(f'starting predictions '
+                     f'{time.time() - t_start_function:.3f} s.')
+        t_start_predictions = time.time()
+        spacy_tot_time = 0
         for i, predicted_token in enumerate(predicted_tokens):
-            if len(predicted_token) < 3 or predicted_token.lower() in stopwords_set or \
+            if i > top_n*10: break
+            t_start_token = time.time()
+            if len(predicted_token) < 3 or \
+                    predicted_token.lower() in stopwords_set or \
                     predicted_token.startswith('##'):
                 pass
             else:
-                cxt_with_token = self.context[:self.target_start] + \
-                                 f' {predicted_token} ' + self.context[self.target_end:]
-                t_start = time.time()
-                doc = nlp(cxt_with_token)
-                logger.debug(f'spacy took {time.time() - t_start:.3f} s.')
-
-                if predicted_token_index is None:
-                    for i, doc_token in enumerate(doc):
-                        if str(doc_token.text) == predicted_token:
-                            predicted_token_index = i
-                            token_pos = doc_token.tag_
-                            break
-                    else:
-                        token_pos = target_pos
-                else:
-                    token_pos = str(doc[predicted_token_index].tag_)
-
+                # cxt_with_token = self.context[:self.target_start] + \
+                #                  f' {predicted_token} ' + \
+                #                  self.context[self.target_end:]
+                # doc = nlp(cxt_with_token)
+                # if predicted_token_index is None:
+                #     for i, doc_token in enumerate(doc):
+                #         if str(doc_token.text) == predicted_token:
+                #             predicted_token_index = i
+                #             token_pos = doc_token.tag_
+                #             break
+                #     else:
+                #         token_pos = target_pos
+                # else:
+                #     token_pos = str(doc[predicted_token_index].tag_)
+                # if target_pos is None or token_pos.startswith(target_pos):
+                #     predicted_token = lemmatizer.lemmatize(predicted_token,
+                #                                            lem_pos[target_pos])
+                #     topn_pred.append(predicted_token)
+                #     if len(topn_pred) >= top_n:
+                #         break
+                tokens = nlp(predicted_token)
+                token_pos = tokens[0].tag_
                 if target_pos is None or token_pos.startswith(target_pos):
-                    predicted_token = lemmatizer.lemmatize(predicted_token, lem_pos[target_pos])
+                    predicted_token = lemmatizer.lemmatize(
+                        predicted_token, lem_pos[target_pos])
                     topn_pred.append(predicted_token)
                     if len(topn_pred) >= top_n:
                         break
+                spacy_tot_time += time.time() - t_start_token
+
+        logger.debug(f'looping through predictions took '
+                     f'{time.time() - t_start_predictions:.3f} s.')
+        logger.debug(f'Spacy total time: {spacy_tot_time:0.3f} s')
+        logger.debug(f'{i} tokens seen, {top_n} chosen')
+        logger.debug(f'The whole function execution took '
+                     f'{time.time() - t_start_function:.3f} s.')
         return topn_pred
 
     def disambiguate(self, sense_clusters:List[List[str]], do_mask=True) \
             -> List[float]:
+        """
+        Disambiguate using the provided sense clusters. Only works well if the
+        sensindicators are tokenized each into a single token, i.e. no pieces.
+
+        :param do_mask: If the target should be masked in the prediction process
+        """
         sense_scores = []
         for sense_cluster in sense_clusters:
             scores = dict()
@@ -234,48 +289,3 @@ class TargetContext:
             sense_score = sum(scores.values()) / len(scores) if scores else 0
             sense_scores.append(sense_score)
         return sense_scores
-
-
-class Document:
-    TARGET = '[TARGET]'
-    MASK = '[MASK]'
-
-    def __init__(self, name, text):
-        self.name = name
-        self.text = text
-        self._sent_tokenized = None
-
-    @property
-    def sent_tokenized(self):
-        if self._sent_tokenized is None:
-            self._sent_tokenized = sent_tokenize(self.text)
-        return self._sent_tokenized
-
-    def sub_targets(self, target_label):
-        tp = self.target_pattern(target_label)
-        subed = tp.sub(' ' + self.MASK + ' ', self.text)
-        return subed
-
-    @staticmethod
-    def target_pattern(target_label):
-        rc = re.compile(r'(?<=\b){}\w{{0,2}}(?=\b)'.format(target_label),
-                        re.IGNORECASE)
-        return rc
-
-    def extract_target_cxts(self, target_labels: List[str]) -> \
-            List[Tuple[str, Tuple[int, int]]]:
-        target_cxts = []
-        tps = [self.target_pattern(tl) for tl in target_labels]
-        for i, sent in enumerate(self.sent_tokenized):
-            ms = [tp.search(sent) for tp in tps]
-            for m in ms:
-                if m:
-                    if len(sent) < 20:
-                        target_sents = (self.sent_tokenized[i-1] + sent +
-                                        self.sent_tokenized[i+1])
-                    else:
-                        target_sents = sent
-                    match_start_end = (m.start(), m.end())
-                    target_cxts.append((target_sents, match_start_end))
-                    break
-        return target_cxts
