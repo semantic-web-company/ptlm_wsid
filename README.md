@@ -29,6 +29,11 @@ Easy install with pip from the github repo:
 ```bash
 pip install -e git://github.com/semantic-web-company/ptlm_wsid.git#egg=ptlm_wsid
 ```
+Then install the `nltk` and `spacy` datasets:
+```
+python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet
+python -m spacy download en_core_web_sm de_core_news_sm nl_core_news_sm es_core_news_sm
+```
 
 
 ## Usage
