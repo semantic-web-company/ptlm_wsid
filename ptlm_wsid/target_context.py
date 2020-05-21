@@ -229,7 +229,8 @@ class TargetContext:
             t_start_token = time.time()
             if len(predicted_token) < 3 or \
                     predicted_token.lower() in stopwords_set or \
-                    predicted_token.startswith('##'):
+                    predicted_token.startswith('##') or \
+                    predicted_token.startswith('['):
                 pass
             else:
                 # cxt_with_token = self.context[:self.target_start] + \

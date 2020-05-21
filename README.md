@@ -21,7 +21,7 @@ See also [this blogpost](https://medium.com/@revenkoartem/label-unstructured-dat
     python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet
     ```
 
-2. You need to point to the language model that you would like to use. For this populate the value in `.env`. By default `bert-base-multilingual-uncased` is used.
+2. You need to point to the language model that you would like to use. The value is read from the environment variable `BERT_MODEL`. By default `bert-base-multilingual-uncased` is used.
 
 ### Installing
 

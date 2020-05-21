@@ -62,3 +62,10 @@ if __name__ == '__main__':
         print(f'Sense #{i+1}')
         print(f'Sense indicators: {", ".join(str(x) for x in sense.intent)}')
         print(f'Found in contexts: {", ".join(str(x) for x in sense.extent)}')
+
+    sense_indicators = [list(sense.intent) for sense in senses]
+    for tc, title in zip(tcs, titles):
+        scores = tc.disambiguate(sense_clusters=sense_indicators)
+        print(f'For context: "{str(title).upper()}. {tc.context}" '
+              f'the sense: {sense_indicators[scores.index(max(scores))]} '
+              f'is chosen.')
