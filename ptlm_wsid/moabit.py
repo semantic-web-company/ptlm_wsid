@@ -154,6 +154,7 @@ def get_ner_substitutes(
                         # do_mask=False,
                         lang='deu')
         print(f'# senses induced: {len(senses)}')
+        print(f'Contexts: {ner_cxts}')
         if senses:
             for sense in senses:
                 print(f'Sense descriptors: {sense.intent}, '
@@ -183,11 +184,11 @@ if __name__ == '__main__':
     ners, tags, cxts, start_ends = collect_ners(forms, tags)
     print(len(ners), len(forms), len(tags))
     print(set(tags))
-    all_ners_file = Path('all_ners.tsv')
-    with all_ners_file.open('w') as f:
-        for (form, cls), freq in Counter(zip(ners, tags)).most_common():
-            f.write('\t'.join([form, cls, str(freq)]))
-            f.write('\n')
+    # all_ners_file = Path('all_ners.tsv')
+    # with all_ners_file.open('w') as f:
+    #     for (form, cls), freq in Counter(zip(ners, tags)).most_common():
+    #         f.write('\t'.join([form, cls, str(freq)]))
+    #         f.write('\n')
     print(Counter(zip(ners, tags)).most_common(100))
     print(Counter(Counter(ners).values()))
     for ners_dict in get_ner_substitutes(ners, tags, cxts, start_ends,

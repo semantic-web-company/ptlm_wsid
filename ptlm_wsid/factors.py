@@ -1,5 +1,5 @@
 import json
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from pathlib import Path
 
@@ -192,4 +192,57 @@ if __name__ == '__main__':
             out = json.dumps(out, indent=2)
             output_path.write_text(out)
 
-    do_many_cxts()
+    # do_many_cxts()
+    example = {
+        'Wetzlar': ['zeitung', 'straße', 'richtung',
+                    'berlin', 'post',
+                    'ortsteil', 'schloss', 'gmbh',
+                    'frankfurt', 'ende',
+                    'hauptbahnhof', 'nord', 'verlag', 'stadtteil',
+                    'stadt', 'platz',
+                    'haus', ],
+        'Sankt Martin': ['prag', 'berlin', 'mai',
+                         'ruhr', 'mainz', 'kirche', 'magdeburg', 'wien',
+                         'augsburg', 'dom', 'hall',
+                         'salzburg', 'stadt', 'raum', 'munchen'],
+        'Main': ['main', 'zeitung', 'leipzig', 'berlin', 'verkehr',
+                 'online', 'gmbh', 'frankfurt',
+                 'wien', 'nurnberg', 'nord', 'verlag', 'rhein', 'stadt',
+                 'munchen', 'city'],
+        'Kowno': ['danzig', 'ort', 'fahrt', 'station',
+                  'konigsberg', 'richtung', 'hera', 'ange', 'gefangen', 'zuge',
+                  'transport', 'lager', 'dorf',
+                  'hauptbahnhof', 'stadt', 'recht'],
+        'Westhafen': ['deutschland', 'paris', 'ort', 'teil',
+                      'station', 'berlin', 'dresden',
+                      'hauptbahnhof', 'nord',
+                      'europa', 'mitte', 'stadt', 'platz',
+                      'standort', 'munchen', 'land', 'bahnhof'],
+        'Heiligensee': ['park', 'station', 'straße', 'berlin', 'hamburg',
+                        'krankenhaus', 'hauptbahnhof', 'wien', 'verlag',
+                        'mitte', 'hilfe', 'recht', 'munchen', 'land'],
+        'San Francisco County': ['bundesstaat', 'region', 'county', 'nord',
+                                 'bezirk', 'teil', 'state', 'provinz', 'raum',
+                                 'staat', 'east', 'south', 'north',
+                                 'washington']
+    }
+    objects = list(example.keys())
+    attributes = Counter(sum(example.values(), []))
+
+    attributes = [x[0] for x in attributes.most_common(10)]
+    table = [[att in example[obj] for att in attributes] for obj in objects]
+    cxt = fca.Context(objects=objects, attributes=attributes, cross_table=table)
+    cxt = normalize_cxt(cxt)
+    fca.write_cxt(cxt, 'example.cxt')
+    print(cxt)
+    factor_iter = algorithm2(cxt, 1)
+    # factors_out = []
+    acc_score = 0
+    for i, (factor, score) in enumerate(factor_iter):
+        if len(factor.extent) > len(factor.intent):
+            # factors_out.append((list(factor.intent), list(factor.extent)))
+            acc_score += score
+            print(f'#{i} {acc_score}\n'
+                  f'Score: {score}\n'
+                  f'Intent: {factor.intent}\n'
+                  f'Extent: {factor.extent}\n')
