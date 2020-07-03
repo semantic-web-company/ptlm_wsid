@@ -1,8 +1,9 @@
 nltk
 torch
-spacy
-pytorch_pretrained_bert
-numpy
+# spacy
+transformers
+# numpy
 python-dotenv
+tqdm
 
 fca @ git+git://github.com/artreven/fca.git#egg=fca
