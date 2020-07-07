@@ -142,10 +142,10 @@ def induce(contexts: List[str],
                                             do_mask=do_mask)
         predicted[titles[i] if (titles and len(titles) >= i) else i] = top_pred
         logger.debug(f'Predictions took {time.time()-start_t:0.3f}')
-        if len(contexts) > min_number_contexts_for_fca_clustering:
-            logger.debug(f'fca_cluster produced {len(senses)} senses.')
-            senses = fca_cluster(predicted,
-                                 n_sense_indicators=n_sense_indicators)
+    if len(contexts) > min_number_contexts_for_fca_clustering:
+        logger.debug(f'fca_cluster produced {len(senses)} senses.')
+        senses = fca_cluster(predicted,
+                             n_sense_indicators=n_sense_indicators)
     if not senses:  # fca_cluster did not produce results
         all_predicted = sum(predicted.values(), [])
         top_predicted = [x[0] for x in Counter(all_predicted).most_common(

@@ -210,16 +210,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-/ptlm_wsid/*.json
-/ptlm_wsid/context_embeddings.py
-/ptlm_wsid/scode.py
-/ptlm_wsid/main.py
-/ptlm_wsid/ler.py
-/ptlm_wsid/moabit.py
-/ptlm_wsid/factors.py
-/ptlm_wsid/ler100.cxt
-/ptlm_wsid/factors.txt
 *__pycache__*
-/ptlm_wsid/ners*
+/ptlm_wsid/*.json
 /ptlm_wsid/*.tsv
-/ptlm_wsid/geo*
+/ptlm_wsid/run

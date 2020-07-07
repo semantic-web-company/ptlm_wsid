@@ -2,7 +2,7 @@ import logging
 import re
 import time
 from functools import lru_cache
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Any, TypeVar, Union
 import os
 
 import torch, torch.nn
@@ -22,6 +22,23 @@ logger = logging.getLogger(__name__)
 model_tok = None
 model_mlm = None
 model = None
+
+
+def load_model():
+    """
+    This function loads bert model and populates the global variable. This way
+    we know only one BERT is loaded.
+    """
+    global model_tok, model_mlm, model
+    if model is None:
+        model_name_or_path = os.getenv('TRANSFORMER_MODEL',
+                                       default='distilbert-base-multilingual-cased')
+        model_tok = AutoTokenizer.from_pretrained(model_name_or_path)
+        model_mlm = AutoModelForMaskedLM.from_pretrained(model_name_or_path)
+        base_model_name = os.getenv('BASE_MODEL_NAME',
+                                    default='distilbert')
+        model = getattr(model_mlm, base_model_name)
+        model_mlm.eval()
 
 
 class LazySpacyDict(dict):
@@ -51,21 +68,6 @@ class LazySpacyDict(dict):
 
 
 nlp_dict = LazySpacyDict()
-
-
-def load_model():
-    """
-    This function loads bert model and populates the global variable. This way
-    we know only one BERT is loaded.
-    """
-    global model_tok, model_mlm, model
-    if model is None:
-        model_name_or_path = os.getenv('TRANSFORMER_MODEL',
-                                       default='distilbert-base-multilingual-cased')
-        model_tok = AutoTokenizer.from_pretrained(model_name_or_path)
-        model_mlm = AutoModelForMaskedLM.from_pretrained(model_name_or_path)
-        model = model_mlm.distilbert
-        model_mlm.eval()
 
 
 class TargetContext:
@@ -100,45 +102,12 @@ class TargetContext:
             target_indices = self.target_indices(do_mask=do_mask)
             if not do_mask and target_indices[1] - target_indices[0] > 1:
                 tokenized[target_indices[0]+1:target_indices[1]] = []
-            assert all(token in model_tok.vocab for token in tokenized)
+            # assert all(token in model_tok.vocab for token in tokenized)
             tks_tensor = torch.tensor(model_tok.encode(tokenized)).unsqueeze(0)
-            predictions = model_mlm(tks_tensor)
-            self._pred[do_mask] = predictions[0, target_indices[0]]
+            predictions = model_mlm(tks_tensor)[0].squeeze()
+            target_predictions = predictions[target_indices[0]+1]  # [CLS] is inserted during encoding
+            self._pred[do_mask] = target_predictions
         return self._pred[do_mask]
-
-    # @staticmethod
-    # @lru_cache(maxsize=32)
-    # def _predict_tokenized(tokenized: Tuple[str], target_ind:int):
-    #     load_model()
-    #     tks_tensor = torch.tensor(model_tok.encode(tokenized)).unsqueeze(0)
-    #     predictions = model_mlm(tks_tensor)
-    #     pred = predictions[0, target_ind]
-    #     return pred
-    #
-    # def get_substitute_score(self, substitute_str:str, do_mask=True):
-    #     substitute_toks = model_tok.tokenize(substitute_str)
-    #
-    #     tokens_to_score = self.tokenized(do_mask=do_mask).copy()
-    #     target_inds = self.target_indices
-    #     if len(substitute_toks) > 1:
-    #         logger.debug(f'The substitute tokens are more than one: '
-    #                      f'{substitute_toks}.')
-    #         tokens_to_score[target_inds[0]:target_inds[1]] = [self.MASK]
-    #         for _ in range(len(substitute_toks) - 1):
-    #             tokens_to_score.insert(target_inds[0], self.MASK)
-    #         logger.debug(f'Resulting tokens: {tokens_to_score}')
-    #
-    #     running_score = 0
-    #     target_ind = target_inds[0]
-    #     for tok in substitute_toks:
-    #         pred = self._predict_tokenized(tuple(tokens_to_score), target_ind)
-    #         tok_bert_ind = bert_tok.convert_tokens_to_ids([tok])
-    #         running_score += pred[tok_bert_ind].item()
-    #         tokens_to_score[target_ind] = tok
-    #         target_ind += 1
-    #     running_score /= len(substitute_toks)
-    #
-    #     return running_score
 
     def target_indices(self, do_mask=True):
         self.tokenize(do_mask=do_mask)
@@ -159,14 +128,14 @@ class TargetContext:
                          for token in model_tok.tokenize(sent)]
                         # + ['[SEP]']
             target_ind = tokenized.index(target_str)
-            if tokenized[target_ind - 1] in ['a', 'an']:
-                del tokenized[target_ind - 1]
+            # if tokenized[target_ind - 1] in ['a', 'an']:
+            #     del tokenized[target_ind - 1]
             tokenized, target_ind = self.crop(tokens=tokenized,
                                               target_index=target_ind)
             if not do_mask:
                 target_toks = model_tok.tokenize(self.target_str)
                 tokenized[target_ind:target_ind+1] = target_toks
-                assert self.MASK not in tokenized
+                assert self.MASK not in tokenized, tokenized
                 target_inds = [target_ind, target_ind+len(target_toks)]
             else:
                 target_inds = [target_ind, target_ind+1]
@@ -224,7 +193,7 @@ class TargetContext:
 
         stopwords_set = set(stopwords.words(stopword_lang))
         topn_pred = []
-        predicted_token_index = None
+        # predicted_token_index = None
         logger.debug(f'starting predictions '
                      f'{time.time() - t_start_function:.3f} s.')
         t_start_predictions = time.time()
@@ -256,22 +225,25 @@ class TargetContext:
                      f'{time.time() - t_start_function:.3f} s.')
         return topn_pred
 
-    def disambiguate(self, sense_clusters:List[List[str]]) \
-            -> List[float]:
+    def disambiguate(self, sense_clusters:List[List[str]],
+                     definitions:List[str] = None) \
+            -> List[Union[float, Tuple[float, float]]]:
         """
         Disambiguate using the provided sense clusters.
         Each returned score is between 0 and 1 - cosine distance of some vectors
         """
 
         def get_contextualized_embedding(ids):
-            outputs, hidden_states = model(ids, output_hidden_states=True)
+            outputs = model(ids)[0]
             # out = torch.mean(torch.stack(hidden_states[-2:]), dim=0).squeeze()
             out = outputs.squeeze()
-            # out = hidden_states[-2].squeeze()
             return out
 
+        if definitions is None:
+            definitions = ['']*len(sense_clusters)
         load_model()
         senses_scores = []
+        defs_scores = []
         with torch.no_grad():
             cosine = torch.nn.CosineSimilarity(dim=0)
 
@@ -280,24 +252,34 @@ class TargetContext:
             cxt_ids = model_tok.encode(tokens)
             cxt_ids = torch.tensor(cxt_ids).unsqueeze(0)
             cxt_embedding = get_contextualized_embedding(cxt_ids)
-            target_embeddings = cxt_embedding[target_start:target_end, :]
+            target_embeddings = cxt_embedding[target_start+1:target_end+1, :]
             target_embedding = torch.mean(target_embeddings, dim=0).squeeze()
 
             for sc in sense_clusters:
-                sc_scores = []
-                for mw_term in sc:
-                    mw_term_ids = torch.tensor(model_tok.encode(mw_term)).unsqueeze(0)
-                    mw_term_outputs = get_contextualized_embedding(mw_term_ids)
-                    mw_term_embedding = torch.mean(mw_term_outputs[1:-1, :],
-                                                   dim=0)
-                    mw_term_score = cosine(mw_term_embedding,
-                                           target_embedding).item()
-                    assert isinstance(mw_term_score, float), mw_term
-                    sc_scores.append(mw_term_score)
-                sc_score = sum(sc_scores) / len(sc_scores)
+                sc_str = ', '.join(sc)
+                sc_tokens = model_tok.tokenize(sc_str)
+                sc_inds = [ind+1 for ind in range(len(sc_tokens))
+                           if sc_tokens[ind] != ',']
+                sc_ids = torch.tensor(model_tok.encode(sc_str)).unsqueeze(0)
+                assert len(sc_ids[0]) == len(sc_tokens) + 2, (len(sc_ids[0]), len(sc_tokens))
+                sc_embeddings = get_contextualized_embedding(sc_ids)
+                sc_embedding = torch.mean(sc_embeddings[sc_inds, :], dim=0)
+                sc_score = cosine(sc_embedding, target_embedding).item()
+                assert isinstance(sc_score, float), sc_str
                 senses_scores.append(sc_score)
-                # hyp_predictions = get_predict_logits(hypernyms_embedding, vocab)
-                # cxt_predictions = get_predict_logits(target_embedding, vocab)
+            for def_ in definitions:
+                if def_.strip():
+                    def_ids = torch.tensor(model_tok.encode(def_)).unsqueeze(0)
+                    def_embeddings = get_contextualized_embedding(def_ids)
+                    def_embedding = torch.mean(def_embeddings[1:-1, :], dim=0)
+                    def_score = cosine(def_embedding, target_embedding).item()
+                    assert isinstance(def_score, float), def_
+                    defs_scores.append(def_score)
+                else:
+                    defs_scores.append(None)
         logger.debug(f'Sense clusters received: {sense_clusters}, '
                      f'scores: {senses_scores}')
-        return senses_scores
+        out = []
+        for s_score, def_score in zip(senses_scores, defs_scores):
+            out.append((s_score, def_score) if def_score else s_score)
+        return out
