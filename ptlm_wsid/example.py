@@ -57,7 +57,7 @@ if __name__ == '__main__':
         titles=titles,
         target_pos='N',  # we want only nouns
         n_sense_indicators=5,  # how many substitutes for each sense in the output
-        top_n_pred=25)  # the number of substitutes for each context
+        top_n_pred=50)  # the number of substitutes for each context
     for i, sense in enumerate(senses):
         print(f'Sense #{i+1}')
         print(f'Sense indicators: {", ".join(str(x) for x in sense.intent)}')
