@@ -14,9 +14,9 @@ See also [this blogpost](https://medium.com/@revenkoartem/label-unstructured-dat
 
 You need to download the required nltk datasets.
     
-    ```
+```bash
     python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet
-    ```
+```
 
 ### Installing
 

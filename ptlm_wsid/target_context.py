@@ -243,7 +243,7 @@ class TargetContext:
         if definitions is None:
             definitions = ['']*len(sense_clusters)
         load_model()
-        senses_scores = []
+        hypers_scores = []
         defs_scores = []
         with torch.no_grad():
             cosine = torch.nn.CosineSimilarity(dim=0)
@@ -257,17 +257,20 @@ class TargetContext:
             target_embedding = torch.mean(target_embeddings, dim=0).squeeze()
 
             for sc in sense_clusters:
-                sc_str = ', '.join(sc)
-                sc_tokens = model_tok.tokenize(sc_str)
-                sc_inds = [ind+1 for ind in range(len(sc_tokens))
-                           if sc_tokens[ind] != ',']
-                sc_ids = torch.tensor(model_tok.encode(sc_str)).unsqueeze(0)
-                assert len(sc_ids[0]) == len(sc_tokens) + 2, (len(sc_ids[0]), len(sc_tokens))
-                sc_embeddings = get_contextualized_embedding(sc_ids)
-                sc_embedding = torch.mean(sc_embeddings[sc_inds, :], dim=0)
-                sc_score = cosine(sc_embedding, target_embedding).item()
-                assert isinstance(sc_score, float), sc_str
-                senses_scores.append(sc_score)
+                if sc.strip():
+                    sc_str = ', '.join(sc)
+                    sc_tokens = model_tok.tokenize(sc_str)
+                    sc_inds = [ind+1 for ind in range(len(sc_tokens))
+                               if sc_tokens[ind] != ',']
+                    sc_ids = torch.tensor(model_tok.encode(sc_str)).unsqueeze(0)
+                    assert len(sc_ids[0]) == len(sc_tokens) + 2, (len(sc_ids[0]), len(sc_tokens))
+                    sc_embeddings = get_contextualized_embedding(sc_ids)
+                    sc_embedding = torch.mean(sc_embeddings[sc_inds, :], dim=0)
+                    sc_score = cosine(sc_embedding, target_embedding).item()
+                    assert isinstance(sc_score, float), sc_str
+                    hypers_scores.append(sc_score)
+                else:
+                    hypers_scores.append(0)
             for def_ in definitions:
                 if def_.strip():
                     def_ids = torch.tensor(model_tok.encode(def_)).unsqueeze(0)
@@ -279,8 +282,8 @@ class TargetContext:
                 else:
                     defs_scores.append(None)
         logger.debug(f'Sense clusters received: {sense_clusters}, '
-                     f'scores: {senses_scores}')
+                     f'scores: {hypers_scores}')
         out = []
-        for s_score, def_score in zip(senses_scores, defs_scores):
+        for s_score, def_score in zip(hypers_scores, defs_scores):
             out.append((s_score, def_score) if def_score else s_score)
         return out
