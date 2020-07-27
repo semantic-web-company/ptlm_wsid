@@ -257,8 +257,8 @@ class TargetContext:
             target_embedding = torch.mean(target_embeddings, dim=0).squeeze()
 
             for sc in sense_clusters:
-                if sc.strip():
-                    sc_str = ', '.join(sc)
+                if any(x.strip() for x in sc):
+                    sc_str = ', '.join(x.strip() for x in sc if x.strip())
                     sc_tokens = model_tok.tokenize(sc_str)
                     sc_inds = [ind+1 for ind in range(len(sc_tokens))
                                if sc_tokens[ind] != ',']
