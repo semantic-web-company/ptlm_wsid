@@ -35,6 +35,11 @@ def prepare_target_contexts(cxt_strs: List[str],
 
 
 if __name__ == '__main__':
+    # # Uncomment if you want additional logs, like cluster scores, etc.
+    # import logging
+    #
+    # logging.basicConfig(level=logging.DEBUG)
+
     cxts_dicts = {
         1: "The jaguar's present range extends from Southwestern United States and Mexico in North America, across much of Central America, and south to Paraguay and northern Argentina in South America.",
         2: "Overall, the jaguar is the largest native cat species of the New World and the third largest in the world.",

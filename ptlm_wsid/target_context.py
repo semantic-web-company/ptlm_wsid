@@ -1,18 +1,16 @@
 import logging
-import re
 import time
-from functools import lru_cache
 from typing import List, Tuple, Optional, Any, TypeVar, Union
 import os
 
 import torch, torch.nn
 import spacy
 from nltk import sent_tokenize
-from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus.reader.wordnet import NOUN, VERB, ADJ, ADV
 from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers.activations import gelu
 
 lemmatizer = WordNetLemmatizer()
 
@@ -31,12 +29,10 @@ def load_model():
     """
     global model_tok, model_mlm, model
     if model is None:
-        model_name_or_path = os.getenv('TRANSFORMER_MODEL',
-                                       default='distilbert-base-multilingual-cased')
+        model_name_or_path = 'distilbert-base-multilingual-cased'
+        base_model_name = 'distilbert'
         model_tok = AutoTokenizer.from_pretrained(model_name_or_path)
         model_mlm = AutoModelForMaskedLM.from_pretrained(model_name_or_path)
-        base_model_name = os.getenv('BASE_MODEL_NAME',
-                                    default='distilbert')
         model = getattr(model_mlm, base_model_name)
         model_mlm.eval()
 
@@ -100,13 +96,19 @@ class TargetContext:
             tokenized = self.tokenize(do_mask=do_mask)
             logger.debug(f'Tokens: {tokenized}, mask: {do_mask}')
             target_indices = self.target_indices(do_mask=do_mask)
-            if not do_mask and target_indices[1] - target_indices[0] > 1:
-                tokenized[target_indices[0]+1:target_indices[1]] = []
+            # if not do_mask and target_indices[1] - target_indices[0] > 1:
+            #     tokenized[target_indices[0]+1:target_indices[1]] = []
             # assert all(token in model_tok.vocab for token in tokenized)
             tks_tensor = torch.tensor(model_tok.encode(tokenized)).unsqueeze(0)
-            predictions = model_mlm(tks_tensor)[0].squeeze()
-            target_predictions = predictions[target_indices[0]+1]  # [CLS] is inserted during encoding
-            self._pred[do_mask] = target_predictions
+
+            cxt_embedding = model(tks_tensor)[0].squeeze()
+            target_embeddings = cxt_embedding[target_indices[0]+1:target_indices[1]+1,:]
+            target_embedding = torch.mean(target_embeddings, dim=0).squeeze()
+            prediction_logits = model_mlm.vocab_transform(target_embedding)
+            prediction_logits = gelu(prediction_logits)
+            prediction_logits = model_mlm.vocab_layer_norm(prediction_logits)
+            prediction_logits = model_mlm.vocab_projector(prediction_logits)
+            self._pred[do_mask] = prediction_logits
         return self._pred[do_mask]
 
     def target_indices(self, do_mask=True):
@@ -122,14 +124,11 @@ class TargetContext:
             target_str = self.MASK
 
             sents = self.sent_tokenizer(context)
-            # tokenized = ['[CLS]']
             tokenized = [token
                          for sent in sents
                          for token in model_tok.tokenize(sent)]
                         # + ['[SEP]']
             target_ind = tokenized.index(target_str)
-            # if tokenized[target_ind - 1] in ['a', 'an']:
-            #     del tokenized[target_ind - 1]
             tokenized, target_ind = self.crop(tokens=tokenized,
                                               target_index=target_ind)
             if not do_mask:
@@ -154,10 +153,11 @@ class TargetContext:
             target_index = target_index - start_ind
         return ans, target_index
 
-    def get_topn_predictions(self, top_n=10, lang='eng',
+    def get_topn_predictions(self, top_n=10, lang='eng', th_len: int = 3,
                              target_pos: str = None, do_mask=True) -> List[str]:
         """
 
+        :param th_len: min length of substitute in chars
         :param top_n: number of top predictions in the output
         :param lang: language iso 3 letter code
         :param target_pos: the desired POS tag of the prediction. 'N', 'J', etc.
@@ -166,7 +166,8 @@ class TargetContext:
         """
         load_model()
         t_start_function = time.time()
-        lem_pos = {'N': NOUN, 'NN': NOUN, 'NOUN': NOUN, 'PRON': NOUN,
+        lem_pos = {'N': NOUN, 'NN': NOUN, 'NNS': NOUN, 'NOUN': NOUN,
+                   'PRON': NOUN,
                    'NNP': NOUN,
                    'PROPN': NOUN, None: NOUN,
                    'J': ADJ, 'JJ': ADJ, 'ADJ': ADJ, 'A': ADJ,
@@ -199,16 +200,16 @@ class TargetContext:
         t_start_predictions = time.time()
         spacy_tot_time = 0
         for i, predicted_token in enumerate(predicted_tokens):
-            if i > top_n*10: break
+            if i > top_n*4: break
             t_start_token = time.time()
-            if len(predicted_token) < 3 or \
+            if len(predicted_token) < th_len or \
                     predicted_token.lower() in stopwords_set or \
                     predicted_token.startswith('##') or \
                     predicted_token.startswith('['):
                 pass
             else:
                 tokens = nlp(predicted_token)
-                token_pos = tokens[0].tag_
+                token_pos = tokens[-1].tag_
                 if target_pos is None or token_pos.startswith(target_pos):
                     predicted_token = lemmatizer.lemmatize(
                         predicted_token, lem_pos[target_pos])
