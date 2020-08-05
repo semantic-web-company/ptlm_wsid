@@ -65,7 +65,7 @@ if __name__ == '__main__':
         top_n_pred=50)  # the number of substitutes for each context
     for i, sense in enumerate(senses):
         print(f'Sense #{i+1}')
-        print(f'Sense indicators: {", ".join(str(x) for x in sense.intent)}')
+        print(f'Sense descriptors: {", ".join(str(x) for x in sense.intent)}')
         print(f'Found in contexts: {", ".join(str(x) for x in sense.extent)}')
 
     sense_indicators = [list(sense.intent) for sense in senses]

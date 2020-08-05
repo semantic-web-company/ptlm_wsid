@@ -72,7 +72,7 @@ def fca_cluster(doc2preds: Dict[str, List[str]],
         cxt, fidelity=1, allow_repeatitions=False,
         min_atts_and_objs=min_size, objs_ge_atts=False
     )
-    for i, (factor, factor_score) in enumerate(factors_iter):
+    for i, (factor, factor_score, agg_score) in enumerate(factors_iter):
         cluster_threshold = sum(chosen_scores) / (len(chosen_scores) + 3) if chosen_scores else 0
         logger.debug(f'### NEXT FACTOR ###')
         logger.debug(f'Factor # {i}, score: {factor_score}')
