@@ -2,7 +2,7 @@ import logging
 import time
 from tempfile import TemporaryFile, NamedTemporaryFile
 from collections import Counter
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Iterator
 
 import numpy as np
 
@@ -96,7 +96,7 @@ def iter_substitutes(contexts, target_start_end_tuples,
                      top_n=50,
                      target_pos='N',
                      lang='deu',
-                     th_substitute_len=3):
+                     th_substitute_len=3) -> Iterator[Tuple[str, List[str], List[str]]]:
     if titles is None:
         titles = range(len(contexts))
     cxt_targetinds = zip(contexts, target_start_end_tuples)
@@ -113,15 +113,15 @@ def iter_substitutes(contexts, target_start_end_tuples,
                                                    lang=lang,
                                                    do_mask=True,
                                                    th_len=th_substitute_len)
-        top_pred = top_pred_unmasked + top_pred_masked
-        yield titles[i] if (titles and len(titles) >= i) else i, top_pred
+        # top_pred = top_pred_unmasked + top_pred_masked
+        yield titles[i] if (titles and len(titles) >= i) else i, top_pred_unmasked, top_pred_masked
 
 
 def induce(contexts: List[str],
            target_start_end_tuples: List[Tuple[int, int]],
            titles: List[str] = None,
            target_pos: str = None,
-           n_sense_indicators=5, lang='eng', top_n_pred=100,
+           n_sense_descriptors=5, lang='eng', top_n_pred=100,
            min_number_contexts_for_fca_clustering=3, min_sub_len=3,
            verbose=False) -> List[fca.Concept]:
     """
@@ -136,7 +136,7 @@ def induce(contexts: List[str],
         len(contexts) == len(target_start_end_tuples)
     :param top_n_pred: how many predictions are produced for each context
     :param titles: Titles of contexts
-    :param n_sense_indicators: how many sense indicators - subset of all
+    :param n_sense_descriptors: how many sense indicators - subset of all
         predictions - are output for each sense
     :param target_pos: the desired part of speach of predictions
     :param lang: language. Used for POS tagging and lemmatization of predictions
@@ -156,17 +156,18 @@ def induce(contexts: List[str],
         top_n=top_n_pred, target_pos=target_pos, lang=lang, )
     if verbose:
         subs = tqdm(subs, total=len(contexts))
-    predicted = {title: top_pred for title, top_pred in subs}
+    predicted = {title: top_pred_m + top_pred_unm
+                 for title, top_pred_m, top_pred_unm in subs}
 
     senses = []
     if len(contexts) >= min_number_contexts_for_fca_clustering:
         senses = fca_cluster(predicted,
-                             n_sense_indicators=n_sense_indicators)
+                             n_sense_indicators=n_sense_descriptors)
         logger.debug(f'fca_cluster produced {len(senses)} senses.')
     if not senses:  # fca_cluster did not produce results
         all_predicted = sum(predicted.values(), [])
         top_predicted = [x[0] for x in Counter(all_predicted).most_common(
-            n_sense_indicators)]
+            n_sense_descriptors)]
         senses = [fca.Concept(intent=top_predicted,
                               extent=list(predicted.keys()))]
         logger.debug(f'Most common predictions are taken as sense indicators.')

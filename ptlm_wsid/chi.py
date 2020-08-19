@@ -75,7 +75,7 @@ def collect_ners(forms, tags, tokens_window=35):
                 start_ind = len(cxt_before) + 1  #
                 end_ind = start_ind + len(ner_str)
                 ner_form = []
-                cxt_after = ' '.join(forms[i+1:i+tokens_window])
+                cxt_after = ' '.join(forms[i:i+tokens_window])
                 cxt = cxt_before + ' ' + ner_str + ' ' + cxt_after
                 contexts.append(cxt)
                 start_ends.append( (start_ind, end_ind) )
@@ -88,14 +88,14 @@ def iter_senses(ner_agg: Dict[str, Iterable[int]],
                 contexts: List[str],
                 start_ends: List[Tuple[int, int]],
                 lang='deu', cxts_limit=50, n_pred=50, target_pos='N',
-                n_sense_indicators=10, th_att_len=4):
+                n_sense_descriptors=10, th_att_len=4):
     for ner_form, ner_inds in tqdm(list(ner_agg.items())):
         ner_cxts, ner_ses = list(zip(*[(contexts[i], start_ends[i])
                                        for i in ner_inds]))
         ner_senses = gf.induce(contexts=ner_cxts[:cxts_limit],
                                target_start_end_tuples=ner_ses[:cxts_limit],
                                target_pos=target_pos, lang=lang, verbose=False,
-                               n_sense_indicators=n_sense_indicators,
+                               n_sense_descriptors=n_sense_descriptors,
                                top_n_pred=n_pred, min_sub_len=th_att_len,
                                min_number_contexts_for_fca_clustering=5)
         yield ner_form, [x.intent for x in ner_senses]

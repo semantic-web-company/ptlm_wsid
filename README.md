@@ -28,9 +28,11 @@ pip install -e git://github.com/semantic-web-company/ptlm_wsid.git#egg=ptlm_wsid
 
 ## Usage
 
-For an example of usage of WSID see [`wsid_example.py`](ptlm_wsid/wsid_example.py).
+For an example of usage of WSID see [`scripts/wsid_example.py`](scripts/wsid_example.py).
 
-For an example of usage class hierarchy induction see [`chi_example.py`](ptlm_wsid/chi_example.py).
+For an example of usage class hierarchy induction see [`scripts/chi_example.py`](scripts/chi_example.py).
+
+For repeating WiC-TSV experiment see [`scripts/wic_tsv.py`](scripts/wic_tsv.py). Do not forget to define the necessary env variables `WIC_TSV_TRAIN_PATH` and `WIC_TSV_TEST_PATH`. 
 
 
 ### Versioning
