@@ -214,3 +214,4 @@ dmypy.json
 /ptlm_wsid/*.json
 /ptlm_wsid/*.tsv
 /ptlm_wsid/run
+!/scripts
