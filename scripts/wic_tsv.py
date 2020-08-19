@@ -135,7 +135,7 @@ if __name__ == '__main__':
         f.write('\n'.join(map(str, hyp_preds)))
     def_preds = predict(hyp_scores, ths[1])
     with open('def_preds.out', 'w') as f:
-        f.writelines('\n'.join(map(str, def_preds)))
+        f.write('\n'.join(map(str, def_preds)))
     comb_preds = predict(hyp_scores, ths[2])
     with open('comb_preds.out', 'w') as f:
-        f.writelines('\n'.join(map(str, comb_preds)))
+        f.write('\n'.join(map(str, comb_preds)))
