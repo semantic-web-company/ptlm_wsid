@@ -1,16 +1,17 @@
 import logging
-import time
-from typing import List, Tuple, Optional, Any, TypeVar, Union
 import os
+import time
+from enum import Enum
+from typing import List, Tuple, Union
 
-import torch, torch.nn
+import torch
+from torch import nn
 import spacy
 from nltk import sent_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus.reader.wordnet import NOUN, VERB, ADJ, ADV
-from transformers import AutoModelForMaskedLM, AutoTokenizer
-from transformers.activations import gelu
+from transformers import AutoModelForMaskedLM, AutoTokenizer, BertPreTrainedModel, DistilBertPreTrainedModel
 
 lemmatizer = WordNetLemmatizer()
 
@@ -20,21 +21,39 @@ logger = logging.getLogger(__name__)
 model_tok = None
 model_mlm = None
 model = None
+model_cls = None
+
+
+class AvailableModels(Enum):
+    bert = 'bert'
+    distilbert = 'distilbert'
 
 
 def load_model():
     """
-    This function loads bert model and populates the global variable. This way
-    we know only one BERT is loaded.
+    This function loads transformer model and populates the global variable. This way
+    we know only one model is loaded.
     """
-    global model_tok, model_mlm, model
+    global model_tok, model_mlm, model, model_cls
     if model is None:
-        model_name_or_path = 'distilbert-base-multilingual-cased'
-        base_model_name = 'distilbert'
+        model_name_or_path = os.getenv('TRANSFORMER_MODEL', default='distilbert-base-multilingual-cased')  # 'bert-base-multilingual-cased'
         model_tok = AutoTokenizer.from_pretrained(model_name_or_path)
         model_mlm = AutoModelForMaskedLM.from_pretrained(model_name_or_path)
-        model = getattr(model_mlm, base_model_name)
         model_mlm.eval()
+        model = model_mlm.base_model
+
+        if isinstance(model_mlm, BertPreTrainedModel):
+            model_cls = model_mlm.cls
+        elif isinstance(model_mlm, DistilBertPreTrainedModel):
+            model_cls = nn.Sequential(
+                model_mlm.vocab_transform,
+                nn.GELU(),
+                model_mlm.vocab_layer_norm,
+                model_mlm.vocab_projector
+            )
+        else:
+            raise ValueError(f'{model_name_or_path} is not supported yet. try one of '
+                             f'{", ".join(list(AvailableModels.__members__.keys()))}')
 
 
 class LazySpacyDict(dict):
@@ -69,8 +88,8 @@ nlp_dict = LazySpacyDict()
 class TargetContext:
     MASK = '[MASK]'
 
-    def __init__(self, context:str,
-                 target_start_end_inds:Tuple[int, int],
+    def __init__(self, context: str,
+                 target_start_end_inds: Tuple[int, int],
                  sent_tokenizer=sent_tokenize):
         """
 
@@ -89,7 +108,6 @@ class TargetContext:
         self._tokenized = dict()
         self._target_indices = dict()
 
-    # @property
     def pred(self, do_mask=True):
         if do_mask not in self._pred:
             load_model()
@@ -104,10 +122,7 @@ class TargetContext:
             cxt_embedding = model(tks_tensor)[0].squeeze()
             target_embeddings = cxt_embedding[target_indices[0]+1:target_indices[1]+1,:]
             target_embedding = torch.mean(target_embeddings, dim=0).squeeze()
-            prediction_logits = model_mlm.vocab_transform(target_embedding)
-            prediction_logits = gelu(prediction_logits)
-            prediction_logits = model_mlm.vocab_layer_norm(prediction_logits)
-            prediction_logits = model_mlm.vocab_projector(prediction_logits)
+            prediction_logits = model_cls(target_embedding)
             self._pred[do_mask] = prediction_logits
         return self._pred[do_mask]
 
@@ -115,7 +130,6 @@ class TargetContext:
         self.tokenize(do_mask=do_mask)
         return self._target_indices[do_mask]
 
-    # @property
     def tokenize(self, do_mask=True):
         if do_mask not in self._tokenized:
             load_model()

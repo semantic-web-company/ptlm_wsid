@@ -8,8 +8,7 @@ from tqdm import trange
 from ptlm_wsid.target_context import TargetContext
 
 
-def estimate_thresholds(contexts, target_inds, hypernyms, definitions,
-                        labels):
+def estimate_thresholds(contexts, target_inds, hypernyms, definitions, labels):
     hyp_scores = []
     def_scores = []
     acc_scores = []
@@ -25,7 +24,7 @@ def estimate_thresholds(contexts, target_inds, hypernyms, definitions,
     acc1 = dict()
     acc2 = dict()
     acc3 = dict()
-    for th_value_int in range(35, 60):
+    for th_value_int in range(35, 160):
         th_value = th_value_int / 100
         acc = [compute_accuracy(scores, th_value, labels) for scores in all_scores]
         acc1[acc[0]] = th_value
@@ -47,32 +46,31 @@ def compute_accuracy(scores, th, labels):
     return acc_score
 
 
-def read_wic_tsv_test(test_path: Path, is_test=True):
+def read_wic_tsv_ds(folder_path: Path):
     contexts = []
     target_inds = []
-    examples_path = next(test_path.glob('*_examples.txt'))
+    examples_path = next(folder_path.glob('*_examples.txt'))
     with examples_path.open() as ex_f:
         ex_f_lines = ex_f.readlines()
         for line in ex_f_lines:
-            if is_test:
-                _, target_ind, context = line.split('\t')
-            else:
-                _, _, context, target_ind = line.split('\t')
-            contexts.append(context)
-            target_inds.append(int(target_ind.strip()))
-    hypernyms_path = next(test_path.glob('*_hypernym.txt'))
+            _, target_ind, context = line.split('\t')
+            target_ind = int(target_ind.strip())
+            clean_cxt = context.strip()
+            contexts.append(clean_cxt)
+            target_inds.append(target_ind)
+    hypernyms_path = next(folder_path.glob('*_hypernyms.txt'))
     with hypernyms_path.open() as hyp_f:
-        hypernyms = [[hyp.replace('_', ' ').strip() for hyp in line.split()]
+        hypernyms = [[hyp.replace('_', ' ').strip() for hyp in line.split('\t')]
                      for line in hyp_f.readlines()]
-    defs_path = next(test_path.glob('*_definitions.txt'))
+    defs_path = next(folder_path.glob('*_definitions.txt'))
     with defs_path.open() as defs_f:
         definitions = defs_f.readlines()
-    # if not is_test:
-    labels_path = next(test_path.glob('*_labels.txt'))
-    with labels_path.open() as labels_f:
-        labels = [x.strip() == 'T' for x in labels_f.readlines()]
-    # else:
-    #     labels = None
+    try:
+        labels_path = next(folder_path.glob('*_labels.txt'))
+        with labels_path.open() as labels_f:
+            labels = [x.strip() == 'T' for x in labels_f.readlines()]
+    except:
+        labels = None
     assert len(contexts) == len(hypernyms) == len(definitions), \
         (len(contexts), len(hypernyms), len(definitions))
     return contexts, target_inds, hypernyms, definitions, labels
@@ -124,18 +122,38 @@ if __name__ == '__main__':
     error_msg = 'Please, set environment variables to point to train and test folders'
     assert wic_tsv_train is not None, error_msg
     assert wic_tsv_test is not None, error_msg
-    data = read_wic_tsv_test(wic_tsv_train, is_test=False)
+    data = read_wic_tsv_ds(wic_tsv_train)
     # contexts, target_inds, hypernyms, definitions, labels = data
     ths = estimate_thresholds(*data)
 
-    a = read_wic_tsv_test(wic_tsv_test)
+    a = read_wic_tsv_ds(wic_tsv_test)
     hyp_scores, def_scores, comb_scores = get_scores(*a, ths=ths)
     hyp_preds = predict(hyp_scores, ths[0])
-    with open('hyp_preds.out', 'w') as f:
+    with open('./hyp_preds.out', 'w') as f:
         f.write('\n'.join(map(str, hyp_preds)))
     def_preds = predict(hyp_scores, ths[1])
-    with open('def_preds.out', 'w') as f:
+    with open('./def_preds.out', 'w') as f:
         f.write('\n'.join(map(str, def_preds)))
     comb_preds = predict(hyp_scores, ths[2])
-    with open('comb_preds.out', 'w') as f:
+    with open('./comb_preds.out', 'w') as f:
         f.write('\n'.join(map(str, comb_preds)))
+
+"""Results:
+Predictions: def_preds_distilbert.out
+{'acc': 0.5689127105666156, 'F_1': 0.3415204678362573, 'P': 0.7604166666666666, 'R': 0.22021116138763197}
+
+Predictions: comb_preds_distilbert.out
+{'acc': 0.611791730474732, 'F_1': 0.5129682997118156, 'P': 0.7063492063492064, 'R': 0.40271493212669685}
+
+Predictions: hyp_preds_distilbert.out
+{'acc': 0.622511485451761, 'F_1': 0.6020984665052461, 'P': 0.6475694444444444, 'R': 0.5625942684766214}
+
+Predictions: def_preds_bert.out
+{'acc': 0.5436447166921899, 'F_1': 0.26237623762376233, 'P': 0.7310344827586207, 'R': 0.15987933634992457}
+
+Predictions: comb_preds_bert.out
+{'acc': 0.6049004594180705, 'F_1': 0.5186567164179104, 'P': 0.6797066014669927, 'R': 0.4193061840120664}
+
+Predictions: hyp_preds_bert.out
+{'acc': 0.6278713629402757, 'F_1': 0.6009852216748769, 'P': 0.6594594594594595, 'R': 0.5520361990950227}
+"""
