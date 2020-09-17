@@ -108,7 +108,7 @@ class TargetContext:
         self._tokenized = dict()
         self._target_indices = dict()
 
-    def pred(self, do_mask=True):
+    def get_pred_logits(self, do_mask=True):
         if do_mask not in self._pred:
             load_model()
             tokenized = self.tokenize(do_mask=do_mask)
@@ -199,8 +199,8 @@ class TargetContext:
                     target_pos = str(doc_tok.tag_)
                     break
 
-        pred = self.pred(do_mask=do_mask)
-        top_predicted = torch.argsort(pred, descending=True)
+        pred_logits = self.get_pred_logits(do_mask=do_mask)
+        top_predicted = torch.argsort(pred_logits, descending=True)
         top_predicted = top_predicted.tolist()
         predicted_tokens = model_tok.convert_ids_to_tokens(top_predicted)
         logger.debug(f'Generation of predictions and their formatting took '

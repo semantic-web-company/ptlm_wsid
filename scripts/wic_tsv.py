@@ -117,12 +117,12 @@ def predict(scores, th):
 
 
 if __name__ == '__main__':
-    wic_tsv_train = Path(os.getenv('WIC_TSV_TRAIN_PATH'))
+    wic_tsv_dev = Path(os.getenv('WIC_TSV_DEV_PATH'))
     wic_tsv_test = Path(os.getenv('WIC_TSV_TEST_PATH'))
     error_msg = 'Please, set environment variables to point to train and test folders'
-    assert wic_tsv_train is not None, error_msg
+    assert wic_tsv_dev is not None, error_msg
     assert wic_tsv_test is not None, error_msg
-    data = read_wic_tsv_ds(wic_tsv_train)
+    data = read_wic_tsv_ds(wic_tsv_dev)
     # contexts, target_inds, hypernyms, definitions, labels = data
     ths = estimate_thresholds(*data)
 
