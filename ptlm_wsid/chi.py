@@ -89,7 +89,9 @@ def iter_senses(ner_agg: Dict[str, Iterable[int]],
                 start_ends: List[Tuple[int, int]],
                 lang='deu', cxts_limit=50, n_pred=50, target_pos='N',
                 n_sense_descriptors=10, th_att_len=4):
-    for ner_form, ner_inds in tqdm(list(ner_agg.items())):
+    pbar = tqdm(list(ner_agg.items()))
+    total_examples = 0
+    for ner_form, ner_inds in pbar:
         ner_cxts, ner_ses = list(zip(*[(contexts[i], start_ends[i])
                                        for i in ner_inds]))
         ner_senses = gf.induce(contexts=ner_cxts[:cxts_limit],
@@ -98,6 +100,8 @@ def iter_senses(ner_agg: Dict[str, Iterable[int]],
                                n_sense_descriptors=n_sense_descriptors,
                                top_n_pred=n_pred, min_sub_len=th_att_len,
                                min_number_contexts_for_fca_clustering=5)
+        total_examples += len(ner_cxts[:cxts_limit])
+        pbar.set_description(desc=f'{total_examples} contexts processed')
         yield ner_form, [x.intent for x in ner_senses]
 
 
