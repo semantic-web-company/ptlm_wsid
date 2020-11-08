@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+v0.1.22
+-------
+
+* Add sklearn in requirements
+
+v0.1.21
+-------
+
+* Add authrs and chnagelog
 * Add HyperBERT model
 * Minor styling changes
 

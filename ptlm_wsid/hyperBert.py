@@ -12,8 +12,6 @@ from torch.utils.data import Dataset
 from transformers import AutoTokenizer, EvalPrediction
 from transformers import Trainer, TrainingArguments
 
-from scripts.wic_tsv import read_wic_tsv_ds
-
 # model_name = 'bert-base-uncased'
 # tok = AutoTokenizer.from_pretrained(model_name)
 
@@ -193,6 +191,8 @@ class WiCTSVDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     import os
     import logging
+
+    from scripts.wic_tsv import read_wic_tsv_ds
     logging.basicConfig(level=logging.INFO)
 
     base_path = Path(os.getenv('DATASET_PATH'))
