@@ -5,6 +5,7 @@ python-dotenv
 tqdm
 conllu
 spacy==2.3
+scikit-learn
 
 https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-2.3.1/es_core_news_sm-2.3.1.tar.gz#egg=es_core_news_sm
 https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-2.3.0/de_core_news_sm-2.3.0.tar.gz#egg=de_core_news_sm
