@@ -21,7 +21,7 @@ class HyperBERT(BertPreTrainedModel):
         super().__init__(config)
 
         self.bert = BertModel(config)
-        self.classifier = nn.Linear(3*config.hidden_size, 1)  # BERT
+        self.hyper_classifier = nn.Linear(3*config.hidden_size, 1)  # BERT
         self.dropout = nn.Dropout(2*config.hidden_dropout_prob)
 
         self.init_weights()
@@ -107,7 +107,7 @@ class HyperBERT(BertPreTrainedModel):
         # pooled_output = self.pre_classifier(pooled_output)  # (bs, dim)
         pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
         pooled_output = self.dropout(pooled_output)  # (bs, dim)
-        logits = self.classifier(pooled_output)  # (bs, 1)
+        logits = self.hyper_classifier(pooled_output)  # (bs, 1)
 
         outputs = (logits,)  # + bert_output[1:]  # add hidden states and attention if they are here
 
