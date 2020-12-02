@@ -1,6 +1,6 @@
 from collections import defaultdict, Counter
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
@@ -14,6 +14,58 @@ from transformers import Trainer, TrainingArguments
 
 # model_name = 'bert-base-uncased'
 # tok = AutoTokenizer.from_pretrained(model_name)
+
+
+def prepare_hyperbert_input(tok,
+                            original_tokens: List[str], original_si: int, original_ei: int,
+                            hypernyms: List[str] = None, definition: str = None,
+                            focus_token='$'):
+    tokens = original_tokens[:]
+    original_target = ' '.join(original_tokens[original_si:original_ei])
+    if focus_token is not None:
+        tokens.insert(original_ei, focus_token)  # after target
+        tokens.insert(original_si, focus_token)  # before target
+        ei = original_ei + 1
+        si = original_si + 1
+    else:
+        ei = original_ei
+        si = original_si
+    context = ' '.join(tokens)
+    hyps_str = f' {focus_token} '.join(hypernyms) if hypernyms is not None else None
+    sense_str = ' ; '.join(x for x in [definition, hyps_str] if x is not None)
+    assert any([definition, hyps_str]), sense_str
+    encodings = tok([[context, sense_str]],
+                     return_tensors='pt', truncation=True, padding=True)
+
+    index_list = []
+    wps = []
+    for original_index in range(len(original_tokens)):
+        toked = tok.tokenize(original_tokens[original_index])
+        index_list += [original_index] * len(toked)
+        wps += toked
+    index_map = defaultdict(list)
+    for bert_index, original_index in enumerate(index_list):
+        index_map[original_index].append(bert_index)
+
+    wp_tgt_ind = index_map[original_si]  # index of target in the list of context's word pieces
+    wp_tgt_ind = wp_tgt_ind[0] + len(['[CLS]'])  # 1 for [CLS] token inserted later
+    tgt_toks = tok.tokenize(original_target)
+    len_wp_tgt = len(tgt_toks)
+    # sanity check
+    calc_tgt = wps[wp_tgt_ind - 1:wp_tgt_ind - 1 + len_wp_tgt]
+    real_tgt = tok.tokenize(original_target)
+    assert calc_tgt == real_tgt, (calc_tgt, real_tgt, context)
+    #
+    descrs_start_ind = len(index_list) + len({'[CLS]', '[SEP]'})
+    descrs_toks = tok.tokenize(sense_str)
+    descrs_len = len(descrs_toks)
+
+    assert descrs_start_ind == len(wps) + 2, (descrs_start_ind, descrs_len, len(wps))
+
+    encodings['target_start_len'] = torch.tensor([(wp_tgt_ind, len_wp_tgt),])
+    encodings['descr_start_len'] = torch.tensor([(descrs_start_ind, descrs_len),])
+
+    return encodings
 
 
 class HyperBERT(BertPreTrainedModel):
@@ -32,7 +84,6 @@ class HyperBERT(BertPreTrainedModel):
             target_start_len=None,
             descr_start_len=None,
             labels=None,
-
             attention_mask=None,
             token_type_ids=None,
             position_ids=None,

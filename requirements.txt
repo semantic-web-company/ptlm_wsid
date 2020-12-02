@@ -1,6 +1,6 @@
 nltk
 torch
-transformers
+transformers<4
 python-dotenv
 tqdm
 conllu

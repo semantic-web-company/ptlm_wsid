@@ -5,6 +5,7 @@
 
 .idea
 *wandb
+/scripts/run
 
 # User-specific stuff
 .idea/**/workspace.xml
