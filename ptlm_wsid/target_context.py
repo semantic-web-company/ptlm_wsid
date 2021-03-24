@@ -17,7 +17,6 @@ lemmatizer = WordNetLemmatizer()
 
 logger = logging.getLogger(__name__)
 
-# global bert_tok, bert
 model_tok = None
 model_mlm = None
 model = None
@@ -36,7 +35,8 @@ def load_model():
     """
     global model_tok, model_mlm, model, model_cls
     if model is None:
-        model_name_or_path = os.getenv('TRANSFORMER_MODEL', default='distilbert-base-multilingual-cased')  # 'bert-base-multilingual-cased'
+        model_name_or_path = os.getenv('TRANSFORMER_MODEL', default='distilbert-base-multilingual-cased')
+        # 'bert-base-multilingual-cased'
         model_tok = AutoTokenizer.from_pretrained(model_name_or_path)
         model_mlm = AutoModelForMaskedLM.from_pretrained(model_name_or_path)
         model_mlm.eval()

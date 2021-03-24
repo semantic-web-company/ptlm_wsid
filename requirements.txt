@@ -1,5 +1,5 @@
 nltk
-torch
+torch<=1.4.0
 transformers<4
 python-dotenv
 tqdm

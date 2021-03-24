@@ -1,6 +1,4 @@
 import logging
-import time
-from tempfile import TemporaryFile, NamedTemporaryFile
 from collections import Counter
 from typing import Dict, List, Tuple, Iterator
 

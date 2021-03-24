@@ -32,7 +32,7 @@ For an example of usage of WSID see [`scripts/wsid_example.py`](scripts/wsid_exa
 
 For an example of usage class hierarchy induction see [`scripts/chi_example.py`](scripts/chi_example.py).
 
-For repeating WiC-TSV experiment see [`scripts/wic_tsv.py`](scripts/wic_tsv.py). Do not forget to define the necessary env variables `WIC_TSV_TRAIN_PATH` and `WIC_TSV_TEST_PATH`. 
+For repeating WiC-TSV experiment see [`scripts/wic_tsv.py`](../type_verication/HyperBert/wic_tsv.py). Do not forget to define the necessary env variables `WIC_TSV_TRAIN_PATH` and `WIC_TSV_TEST_PATH`. 
 
 
 ### Versioning

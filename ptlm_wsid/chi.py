@@ -1,32 +1,14 @@
 """
 A module for Class Hierarchy Induction = CHI
 """
-from collections import defaultdict, Counter
-from typing import Iterator, Tuple, Dict, List, TextIO, Iterable
-from io import StringIO
+from typing import Iterator, Tuple, Dict, List, Iterable
 
 from conllu import parse, TokenList
 from tqdm import tqdm
 
-import fca
 import ptlm_wsid.generative_factors as gf
-import ptlm_wsid.utils as ptlm_utils
 
 O_tags = {'"', 'NE', 'O'}
-
-
-# def parse_conll(f: TextIO, fields=('form', 'tag'),
-#                 n_tokens: int = -1) -> Iterator[TokenList]:
-#     data = parse_incr(
-#         f, fields=fields,
-#         field_parsers={'tag': lambda line, i: line[i].split('-')})
-#     i = 0
-#     for sent in data:
-#         for w in sent:
-#             i += 1
-#             if 0 < n_tokens < i:
-#                 return
-#             yield w['form'], w['tag']
 
 
 def parse_conll(data_str: str, fields=('form', '1', '2', 'tag'),
