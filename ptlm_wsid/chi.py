@@ -3,7 +3,7 @@ A module for Class Hierarchy Induction = CHI
 """
 from typing import Iterator, Tuple, Dict, List, Iterable
 
-from conllu import parse, TokenList
+# from conllu import parse, parse_incr
 from tqdm import tqdm
 
 import ptlm_wsid.generative_factors as gf
@@ -11,17 +11,17 @@ import ptlm_wsid.generative_factors as gf
 O_tags = {'"', 'NE', 'O'}
 
 
-def parse_conll(data_str: str, fields=('form', '1', '2', 'tag'),
-                n_tokens: int = -1) -> Iterator[TokenList]:
-    data = parse(data_str, fields=fields,
-                 field_parsers={'tag': lambda line, i: line[i].split('-')})
-    i = 0
-    for sent in data:
-        for w in sent:
-            i += 1
-            if 0 < n_tokens < i:
-                return
-            yield w['form'], w['tag']
+# def parse_conll(data_str: str, fields=('form', '1', '2', 'tag'),
+#                 n_tokens: int = -1) -> Iterator[Tuple[str, str]]:
+#     data = parse(data_str, fields=fields,
+#                  field_parsers={'tag': lambda line, i: line[i].split('-')})
+#     i = 0
+#     for sent in data:
+#         for w in sent:
+#             i += 1
+#             if 0 < n_tokens < i:
+#                 return
+#             yield w['form'], w['tag']
 
 
 def collect_ners(forms, tags, tokens_window=35):
@@ -54,7 +54,7 @@ def collect_ners(forms, tags, tokens_window=35):
                 cxt_start_ind = i - tokens_window - len(ner_form)
                 cxt_start_ind = cxt_start_ind if cxt_start_ind > 0 else 0
                 cxt_before = ' '.join(forms[cxt_start_ind:(i - len(ner_form))])
-                start_ind = len(cxt_before) + 1  #
+                start_ind = len(cxt_before) + 1  # compensate for additional space after cxt_before
                 end_ind = start_ind + len(ner_str)
                 ner_form = []
                 cxt_after = ' '.join(forms[i:i+tokens_window])

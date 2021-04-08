@@ -32,19 +32,11 @@ For an example of usage of WSID see [`scripts/wsid_example.py`](scripts/wsid_exa
 
 For an example of usage class hierarchy induction see [`scripts/chi_example.py`](scripts/chi_example.py).
 
-For repeating WiC-TSV experiment see [`scripts/wic_tsv.py`](../type_verication/HyperBert/wic_tsv.py). Do not forget to define the necessary env variables `WIC_TSV_TRAIN_PATH` and `WIC_TSV_TEST_PATH`. 
-
 
 ### Versioning
 
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/semantic-web-company/ptlm_wsid/tags).
 
-### Authors
-
-* [**Artem Revenko**](https://github.com/artreven) 
-
 ### License
 
 This project is licensed under the MIT License.
-
-### TODOs

@@ -10,6 +10,7 @@ class Install(_install):
         import nltk
         nltk.download("all")
 
+
 setup(
     cmdclass={'install': Install},
     install_requires=[

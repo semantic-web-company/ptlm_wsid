@@ -2,9 +2,24 @@ from collections import defaultdict, Counter
 from io import StringIO
 from typing import Iterator, List, Iterable, Tuple
 
+import conllu
+
 import fca
-from ptlm_wsid.chi import parse_conll, collect_ners, iter_senses
+from ptlm_wsid.chi import collect_ners, iter_senses
 from ptlm_wsid.utils import get_cxt, clean_cxt
+
+
+def parse_conll(data_str: str, fields=('form', '1', '2', 'tag'),
+                n_tokens: int = -1) -> Iterator[Tuple[str, str]]:
+    data = conllu.parse(data_str, fields=fields,
+                        field_parsers={'tag': lambda line, i: line[i].split('-')})
+    i = 0
+    for sent in data:
+        for w in sent:
+            i += 1
+            if 0 < n_tokens < i:
+                return
+            yield w['form'], w['tag']
 
 
 def iter_ners_dict(dataset: str,
@@ -13,11 +28,9 @@ def iter_ners_dict(dataset: str,
                    n_sense_descriptors=25,
                    th_att_len=4,
                    lang='deu') -> Iterator[Tuple[str, List[str]]]:
-    # 1
     data = parse_conll(dataset, fields=fields, n_tokens=t_limit)
     all_forms, all_tags = list(zip(*list(data)))
     print(f'Total {len(all_forms)} tokens')
-    # 2
     ners, tags, contexts, start_ends = collect_ners(all_forms, all_tags,
                                                     tokens_window=25)
     ner_agg = defaultdict(list)
@@ -44,7 +57,6 @@ if __name__ == '__main__':
                                                         t_limit=t_limit)
                  for i, sense in enumerate(senses)}
     print(f'NE senses obtained, total: {len(ners_dict)}')
-    # 4
     cxt = get_cxt(ners_dict)
     print(f'Binary matrix prepared. NEs: {len(cxt.objects)}, '
           f'descriptors: {len(cxt.attributes)}')
@@ -54,7 +66,6 @@ if __name__ == '__main__':
           f'3 corresponding entities removed for speedup. '
           f'descriptors: {len(cxt.attributes)}, '
           f'NEs: {len(cxt.objects)}, ')
-    # 5
     factors_iter = fca.algorithms.factors.algorithm2_w_condition(
         cxt, fidelity=0.8,
         allow_repeatitions=False,
