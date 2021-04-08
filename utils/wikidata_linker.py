@@ -10,23 +10,23 @@ import requests
 from utils.entity_linker import EntityLinker
 
 
-# To run the fishing server
-#  docker run --rm --name fishing_ctr -p 8090:8090 -v ${PWD}/data/db:/fishing/nerd/data/db/ -it fishing
+placeholder_texts ={"en": " is a concept we want to find",
+                    "de": " ist ein Begriff, den wir finden wollen",
+                    "es": " es un concepto que queremos encontrar"}
 
-placeholder_texts ={"en":" is a concept we want to find",
-                    "de":" ist ein Konzept wir finden willen",
-                    "es":" es un concepto que queremos encontrar"}
 
 class WikidataLinker(EntityLinker):
-
-    def __init__(self, config=None):
-        if config is None:
-            config=dict()
-        super().__init__(config)
-        self.linking_url = config.get("fishing_url", "http://localhost:8090")
-        self.sparql_endpoint = config.get("wikidata_sparql","https://query.wikidata.org/sparql")
-        self.caches_dir = config.get("linking_caches_directory","/tmp")
-        language = config.get("language", "en")
+    # To run the fishing server
+    #  docker run --rm --name fishing_ctr -p 8090:8090 -v ${PWD}/data/db:/fishing/nerd/data/db/ -it fishing
+    def __init__(self,
+                 el_url: str = "http://localhost:8090",
+                 wikidata_sparql: str = "https://query.wikidata.org/sparql",
+                 linking_caches_directory: str = "/tmp",
+                 language: str = "en"
+                 ):
+        self.linking_url = el_url
+        self.sparql_endpoint = wikidata_sparql
+        self.caches_dir = linking_caches_directory
 
         self.label_cache = dict()
         self.linking_cache = dict()
@@ -122,8 +122,6 @@ class WikidataLinker(EntityLinker):
 
         return response.json()
 
-
-
     def _generate_uri(self, localname=""):
         ln = "_".join(localname.lower().split())
         return "<https://some.uri/" + str(uuid.uuid4()) + "/" + ln + ">"
@@ -177,7 +175,7 @@ class WikidataLinker(EntityLinker):
             else:
                 score = max(scores)
 
-            if score>bestscore*0.8 and jaccard > maxjaccard:
+            if score > bestscore*0.8 and jaccard > maxjaccard:
                 bestmatching = "<http://www.wikidata.org/entity/"+ent["wikidataId"]+">"
                 maxjaccard = jaccard
             else:
@@ -190,7 +188,6 @@ class WikidataLinker(EntityLinker):
 
     def link_standalone(self,
                         surface_form: str):
-
         artificial_context = surface_form + placeholder_texts.get(self.language,
                                                                   placeholder_texts["en"])
 

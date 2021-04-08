@@ -11,7 +11,8 @@ import conllu
 
 import fca
 from ptlm_wsid.chi import collect_ners, iter_senses
-from utils.dummy_linker import DummyLinker as Linker
+from utils.dummy_linker import DummyLinker
+from utils.wikidata_linker import WikidataLinker
 from ptlm_wsid.utils import get_cxt, clean_cxt
 # from scripts.chi_example import iter_ners_dict
 
@@ -203,7 +204,16 @@ if __name__ == '__main__':
         assert ner == contexts[i][start_ends[i][0]:start_ends[i][1]]
         ner_agg[f'{ner}::{tag}'].append(i)
     logger.info(f'Total {len(all_forms)} tokens, {len(ners)} NE occurrences, {len(ner_agg)} unique NEs')
-    linker = Linker(config=config['wikiner'])
+
+    if config['entity_linking']['linker'] == 'wikidata':
+        linker = WikidataLinker(
+            language=config['entity_linking']['language'],
+            el_url=config['entity_linking']['el_url']
+        )
+    elif config['entity_linking']['linker'] == 'dummy':
+        linker = DummyLinker()
+    else:
+        raise ValueError(f"Linker {config['entity_linking']['linker']} is not implemented.")
     with open(config['wikiner']['ner_contexts_output'], 'w') as f:
         ner_cxt_lines = ['\t'.join(['NE::tag', 'Start offset', 'End offset', 'Context','URI'])]
         ner_cxt_lines += ['\t'.join([ner_tag,

@@ -10,37 +10,15 @@ See also [this blogpost](https://medium.com/@revenkoartem/label-unstructured-dat
 
 ## Getting Started
 
-### Prerequisites
+[comment]: <> (### Prerequisites)
 
-You need to download the required nltk datasets.
+[comment]: <> (You need to download the required nltk datasets.)
     
-```bash
-    python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet
-```
+[comment]: <> (```bash)
 
-#### to make use of entity linking using wikidata
-You will need to download and setup an [Entity Fishing](https://nerd.readthedocs.io/en/latest/) service. For this you can follow:
+[comment]: <> (    python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet)
 
-1. Create a new directory, in that directory:
-2. Clone the git repo `https://github.com/syats/entity-fishing.git`
-3. Go into that repo's main directory, `[repo_root]`, 
-4. do:  `docker build -t fishing .`
-5. Meanwhile download the very heavy database that Entity Fishing uses
-```
- cd [repo-root]/data/db
- wget https://science-miner.s3.amazonaws.com/entity-fishing/0.0.3/linux/db-de.zip 
- wget https://science-miner.s3.amazonaws.com/entity-fishing/0.0.3/linux/db-en.zip 
- wget https://science-miner.s3.amazonaws.com/entity-fishing/0.0.3/linux/db-kb.zip 
- unzip db-de.zip
- unzip db-kb.zip
- mv *zip ..
-
-```  
-7. Run container:
- ` cd [repo-root]`
- ` docker run --rm --name fishing_ctr -p 8090:8090 -v ${PWD}/data/db:/fishing/nerd/data/db/ -it fishing`
-8. Enjoy in `http://localhost:9897/`
-  Example: `curl 'http://localhost:8090/service/disambiguate' -X POST -F "query={ 'text': 'Die Schlacht bei Tannenberg war eine Schlacht des Ersten Weltkrieges und fand in der Gegend südlich von Allenstein in Ostpreußen vom 26. August bis 30. August 1914 zwischen deutschen und russischen Armeen statt. Die deutsche Seite stellte hierbei 153.000 Mann, die russische Seite 191.000 Soldaten ins Feld. Sie endete mit einem Sieg der deutschen Truppen und der Zerschlagung der ins südliche Ostpreußen eingedrungenen russischen Kräfte.', 'language':'de'}"`
+[comment]: <> (```)
 
 
 ### Installing
@@ -53,9 +31,7 @@ pip install -e git://github.com/semantic-web-company/ptlm_wsid.git#egg=ptlm_wsid
 
 ## Usage
 
-For an example of usage of WSID see [`scripts/wsid_example.py`](scripts/wsid_example.py).
-
-For an example of usage class hierarchy induction see [`scripts/chi_example.py`](scripts/chi_example.py).
+Find examples of usage in [scripts](./scripts).
 
 
 ### Versioning

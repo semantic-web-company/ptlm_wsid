@@ -3,9 +3,8 @@ import logging
 
 
 class EntityLinker(ABC):
-
-    def __init__(self, config: dict):
-        pass
+    # def __init__(self, **kwargs):
+    #     pass
 
     def _gen_key(self,
                  surface_form: str,

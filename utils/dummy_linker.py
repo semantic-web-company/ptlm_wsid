@@ -5,10 +5,8 @@ import logging
 
 class DummyLinker(EntityLinker):
 
-    def __init__(self,  config=None):
-        if config is None:
-            config=dict()
-        language = config.get("language","en")
+    def __init__(self,
+                 language: str = 'en'):
         logging.info("Dummy Linker initialized with language ", language)
         self.cache = dict()
         self.language = language
@@ -26,7 +24,7 @@ class DummyLinker(EntityLinker):
                              context=context)
         uri = self.cache.get(key_, self._generate_uri(surface_form))
         self.cache[key_] = uri
-        return (uri)
+        return uri
 
     def link_standalone(self,
                         surface_form: str):
