@@ -210,7 +210,7 @@ if __name__ == '__main__':
                                      str(start_ends[i][0]),
                                      str(start_ends[i][1]),
                                      contexts[i],
-                                     linker.link_within_context(surface_form=ner_tag,
+                                     linker.link_within_context(surface_form=ner_tag.split('::')[0],
                                                                 start_offset=start_ends[i][0],
                                                                 end_offset=start_ends[i][1],
                                                                 context=contexts[i])])
