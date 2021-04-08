@@ -11,6 +11,7 @@ import conllu
 
 import fca
 from ptlm_wsid.chi import collect_ners, iter_senses
+from utils.dummy_linker import DummyLinker as Linker
 from ptlm_wsid.utils import get_cxt, clean_cxt
 # from scripts.chi_example import iter_ners_dict
 
@@ -202,9 +203,17 @@ if __name__ == '__main__':
         assert ner == contexts[i][start_ends[i][0]:start_ends[i][1]]
         ner_agg[f'{ner}::{tag}'].append(i)
     logger.info(f'Total {len(all_forms)} tokens, {len(ners)} NE occurrences, {len(ner_agg)} unique NEs')
+    linker = Linker(config=config['wikiner'])
     with open(config['wikiner']['ner_contexts_output'], 'w') as f:
-        ner_cxt_lines = ['\t'.join(['NE::tag', 'Start offset', 'End offset', 'Context'])]
-        ner_cxt_lines += ['\t'.join([ner_tag, str(start_ends[i][0]), str(start_ends[i][1]), contexts[i]])
+        ner_cxt_lines = ['\t'.join(['NE::tag', 'Start offset', 'End offset', 'Context','URI'])]
+        ner_cxt_lines += ['\t'.join([ner_tag,
+                                     str(start_ends[i][0]),
+                                     str(start_ends[i][1]),
+                                     contexts[i],
+                                     linker.link_within_context(surface_form=ner_tag,
+                                                                start_offset=start_ends[i][0],
+                                                                end_offset=start_ends[i][1],
+                                                                context=contexts[i])])
                           for ner_tag, ner_inds in ner_agg.items()
                           for i in ner_inds]
         f.write('\n'.join(ner_cxt_lines))
