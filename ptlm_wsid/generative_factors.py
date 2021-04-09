@@ -10,12 +10,16 @@ from tqdm import tqdm
 
 import ptlm_wsid.target_context as tc
 
-logger = logging.getLogger(__name__)
+local_logger = logging.getLogger(__name__)
 
 
 def fca_cluster(doc2preds: Dict[str, List[str]],
                 n_sense_indicators=5,
-                min_size=3) -> List[fca.Concept]:
+                min_size=3,
+                logger=None) -> List[fca.Concept]:
+    if logger is None:
+        logger = local_logger
+
     def get_cxt():
         intents = []
         objs = []
@@ -121,7 +125,8 @@ def induce(contexts: List[str],
            target_pos: str = None,
            n_sense_descriptors=5, lang='eng', top_n_pred=100,
            min_number_contexts_for_fca_clustering=3, min_sub_len=3,
-           verbose=False) -> List[fca.Concept]:
+           verbose=False,
+           logger=None) -> List[fca.Concept]:
     """
     The function induces sense(s) of the target from a collection of contexts.
     This function always returns a result. If the proper clustering does not
@@ -142,6 +147,8 @@ def induce(contexts: List[str],
         to try the fca clustering. If there are only 1 or 2 then it often does
         not make sense to cluster.
     """
+    if logger is None:
+        logger = local_logger
     if not len(contexts) == len(target_start_end_tuples):
         raise ValueError(f'Length of contexts {len(contexts)} is not equal to '
                          f'the length of start and end indices list '
@@ -169,7 +176,3 @@ def induce(contexts: List[str],
                               extent=list(predicted.keys()))]
         logger.debug(f'Most common predictions are taken as sense indicators.')
     return senses
-
-
-if __name__ == '__main__':
-    pass

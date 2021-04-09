@@ -42,34 +42,34 @@ from ptlm_wsid.utils import get_cxt, clean_cxt
 #         json.dump(ners_dict, f, indent=2)
 #     return ners_dict
 
-
-def iter_factors(cxt, fidelity=0.5, min_atts_and_objs=4, allow_repeatitions=False):
-    params_dict = dict(fidelity=fidelity,
-                       allow_repeatitions=allow_repeatitions,
-                       min_atts_and_objs=min_atts_and_objs,
-                       objs_ge_atts=True)
-    factors_iter = fca.algorithms.factors.algorithm2_w_condition(
-        cxt, **params_dict)
-    print(f'fidelity: stops when this fraction of crosses in the table are covered. check aggregated score with each factor.')
-    print(f'Parameters: {params_dict}')
-    ###
-    print('New classes:')
-    for i, (factor, cls_score, agg_score) in enumerate(factors_iter):
-        factor_ne_cls = Counter([obj.split('::')[-1].split('##')[0]
-                                 for obj in factor.extent])
-        out = f'\nClass {i}.\n'
-        out += f'{", ".join(factor.intent)}.\n'
-        out += f'Contained NE types {factor_ne_cls}\n'
-        out += f'Class score: {cls_score:0.4f}, aggregated score: {agg_score:0.4f}\n'
-        out += f'Total NEs: {len(factor.extent)}, total descriptors: {len(factor.intent)}'
-        print(out)
-        out_json = {
-            'score': cls_score,
-            'descriptors': list(factor.intent),
-            'entities': list(factor.extent),
-            'types': factor_ne_cls
-        }
-        yield out_json
+#
+# def iter_factors(cxt, fidelity=0.5, min_atts_and_objs=4, allow_repeatitions=False):
+#     params_dict = dict(fidelity=fidelity,
+#                        allow_repeatitions=allow_repeatitions,
+#                        min_atts_and_objs=min_atts_and_objs,
+#                        objs_ge_atts=True)
+#     factors_iter = fca.algorithms.factors.algorithm2_w_condition(
+#         cxt, **params_dict)
+#     print(f'fidelity: stops when this fraction of crosses in the table are covered. check aggregated score with each factor.')
+#     print(f'Parameters: {params_dict}')
+#     ###
+#     print('New classes:')
+#     for i, (factor, cls_score, agg_score) in enumerate(factors_iter):
+#         factor_ne_cls = Counter([obj.split('::')[-1].split('##')[0]
+#                                  for obj in factor.extent])
+#         out = f'\nClass {i}.\n'
+#         out += f'{", ".join(factor.intent)}.\n'
+#         out += f'Contained NE types {factor_ne_cls}\n'
+#         out += f'Class score: {cls_score:0.4f}, aggregated score: {agg_score:0.4f}\n'
+#         out += f'Total NEs: {len(factor.extent)}, total descriptors: {len(factor.intent)}'
+#         print(out)
+#         out_json = {
+#             'score': cls_score,
+#             'descriptors': list(factor.intent),
+#             'entities': list(factor.extent),
+#             'types': factor_ne_cls
+#         }
+#         yield out_json
 
 
 # def read_json_classes(folder: Path):
@@ -190,13 +190,13 @@ if __name__ == '__main__':
     logging.config.fileConfig(config)
     logger.info(f'Config: {config.items("wikiner")}')
     # config into vars
-    ners_pred_target_path = Path(config['wikiner']['ners_predictions_output'])
+    ners_predictions_output_stem = Path(config['wikiner']['ners_predictions_output_stem'])
     nes_in_cxts_path = Path(config['wikiner']['ner_contexts_output'])
     language = config['wikiner']['language']
     t_limit = int(config['wikiner']['tokens_to_be_processed'])
     conll_data_path = config['wikiner']['conll_data_path']
-    m = int(config['wikiner']['m'])
-    k = int(config['wikiner']['k'])
+    ms = [int(m) for m in config['wikiner']['ms']]
+    max_k = int(config['wikiner']['max_k'])
     th_n_descriptors = int(config['wikiner']['th_type_descriptors'])
     # Read data
     if nes_in_cxts_path.exists():
@@ -205,7 +205,7 @@ if __name__ == '__main__':
         with open(nes_in_cxts_path) as f:
             f.readline()  # skip the first line - headers
             data_lines = f.readlines()
-        nes_tags, start_inds, end_inds, contexts, orig_uris = tuple(zip(*[line.split('\t') for line in data_lines if line.strip()]))
+        nes_tags, start_inds, end_inds, contexts, orig_uris = tuple(zip(*[line.strip().split('\t') for line in data_lines if line.strip()]))
         start_inds = tuple(map(int, start_inds))
         end_inds = tuple(map(int, end_inds))
         nes, tags = tuple(zip(*[x.split('::') for x in nes_tags]))
@@ -255,31 +255,29 @@ if __name__ == '__main__':
     logger.info(f'Total {len(nes)} NE occurrences, {len(ne_aggregate)} unique URIs, '
                 f'{len(unique_ne_phrases)} unique NE surface forms, '
                 f'{len(unique_ne_tag_pairs)} unique NE::tag pairs.')
-
+    # TODO: loop over m values in $ms
     #
-    if ners_pred_target_path.exists():
-        with open(ners_pred_target_path) as f:
-            ners_dict = json.load(f, indent=2)
-    else:
-        induction_lang = 'eng' if language == 'en' else 'deu' if language == 'de' else None
-        senses_iter = iter_senses(ne_aggregate, contexts, list(zip(start_inds, end_inds)),
-                                  lang=induction_lang, cxts_limit=50, n_pred=2*m,
-                                  n_sense_descriptors=k,
-                                  target_pos='N',
-                                  th_att_len=4)
-        ners_dict = dict()
-        for j, (ner_form, ner_senses) in enumerate(senses_iter):
-            if len(ner_senses) > 1:
-                for i, sense in enumerate(ner_senses):
-                    ners_dict[f'{ner_form}##{i}'] = list(sense)
-            else:
-                ners_dict[f'{ner_form}'] = list(ner_senses[0])
-            if j == 10:
-                intermediate_file_path = ners_pred_target_path.parent / (ners_pred_target_path.stem + f'{j}.json')
-                with open(intermediate_file_path, 'w') as f:
-                    json.dump(ners_dict, f, indent=2)
-        with open(ners_pred_target_path, 'w') as f:
-            json.dump(ners_dict, f, indent=2)
+
+    induction_lang = 'eng' if language == 'en' else 'deu' if language == 'de' else None
+    senses_iter = iter_senses(ne_aggregate, contexts, list(zip(start_inds, end_inds)),
+                              lang=induction_lang, cxts_limit=50, n_pred=2*m,
+                              n_sense_descriptors=k,
+                              target_pos='N',
+                              th_att_len=4,
+                              logger=logger)
+    ners_dict = dict()
+    for j, (ner_form, ner_senses) in enumerate(senses_iter):
+        if len(ner_senses) > 1:
+            for i, sense in enumerate(ner_senses):
+                ners_dict[f'{ner_form}##{i}'] = list(sense)
+        else:
+            ners_dict[f'{ner_form}'] = list(ner_senses[0])
+        if j == 10:
+            intermediate_file_path = ners_predictions_output_stem.parent / f'{ners_predictions_output_stem}{j}.json'
+            with open(intermediate_file_path, 'w') as f:
+                json.dump(ners_dict, f, indent=2)
+    with open(str(ners_predictions_output_stem) + f'_m{m}_k{max_k}.json', 'w') as f:
+        json.dump(ners_dict, f, indent=2)
     assert False
 
     # for ner_form, ner_senses in senses_iter:
@@ -294,20 +292,20 @@ if __name__ == '__main__':
     #                           lang='eng')
     # with (ners_pred_target_folder / f'preds237.json').open() as f:
     #     ners_dict = json.load(f)
-    cxt = get_cxt(ners_dict)
-    print(f'Binary matrix prepared. NEs: {len(cxt.objects)}, '
-          f'descriptors: {len(cxt.attributes)}')
-    cxt = clean_cxt(cxt, min_att_extent=3, min_att_len=4)
-    print(f'Binary matrix cleaned. All descriptors with less than 3 corresponding entities removed for speedup. '
-          f'descriptors: {len(cxt.attributes)}, '
-          f'NEs: {len(cxt.objects)}, ')
-    for i, factor_dict in enumerate(iter_factors(cxt, min_atts_and_objs=3)):
-        with (ners_pred_target_folder / 'new_classes' / f'class{i}.json').open('w') as f:
-            json.dump(factor_dict, f)
-
-    th_ent = 20
-    classes_path = ners_pred_target_folder / 'new_classes'
-    all_classes, filenames = read_json_classes(folder=classes_path)
+    # cxt = get_cxt(ners_dict)
+    # print(f'Binary matrix prepared. NEs: {len(cxt.objects)}, '
+    #       f'descriptors: {len(cxt.attributes)}')
+    # cxt = clean_cxt(cxt, min_att_extent=3, min_att_len=4)
+    # print(f'Binary matrix cleaned. All descriptors with less than 3 corresponding entities removed for speedup. '
+    #       f'descriptors: {len(cxt.attributes)}, '
+    #       f'NEs: {len(cxt.objects)}, ')
+    # for i, factor_dict in enumerate(iter_factors(cxt, min_atts_and_objs=3)):
+    #     with (ners_pred_target_folder / 'new_classes' / f'class{i}.json').open('w') as f:
+    #         json.dump(factor_dict, f)
+    #
+    # th_ent = 20
+    # classes_path = ners_pred_target_folder / 'new_classes'
+    # all_classes, filenames = read_json_classes(folder=classes_path)
 
     # chosen_factors, chosen_fns = zip(*[
     #     (cls, fn) for cls, fn in zip(all_classes, filenames)
