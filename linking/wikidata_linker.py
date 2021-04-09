@@ -7,7 +7,7 @@ import json
 
 import requests
 
-from utils.entity_linker import EntityLinker
+from linking.entity_linker import EntityLinker
 
 
 placeholder_texts ={"en": " is a concept we want to find",

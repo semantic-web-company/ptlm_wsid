@@ -1,4 +1,4 @@
-from utils.entity_linker import EntityLinker
+from linking.entity_linker import EntityLinker
 import uuid
 import logging
 
@@ -13,7 +13,8 @@ class DummyLinker(EntityLinker):
 
     def _generate_uri(self, localname=""):
         ln = "_".join(localname.lower().split())
-        return "<https://some.uri/" + str(uuid.uuid4()) + "/" + ln + ">"
+        # return "<https://some.uri/" + str(uuid.uuid4()) + "/" + ln + ">"
+        return f"<{ln}>"
 
     def link_within_context(self,
                             surface_form: str,

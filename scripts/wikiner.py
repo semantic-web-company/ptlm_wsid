@@ -11,8 +11,8 @@ import conllu
 
 import fca
 from ptlm_wsid.chi import collect_ners, iter_senses
-from utils.dummy_linker import DummyLinker
-from utils.wikidata_linker import WikidataLinker
+from linking.dummy_linker import DummyLinker
+from linking.wikidata_linker import WikidataLinker
 from ptlm_wsid.utils import get_cxt, clean_cxt
 # from scripts.chi_example import iter_ners_dict
 
