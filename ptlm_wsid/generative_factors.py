@@ -164,15 +164,18 @@ def induce(contexts: List[str],
                  for title, top_pred_m, top_pred_unm in subs}
 
     senses = []
+    target_phrase_in_fiurst_cintext = contexts[0][target_start_end_tuples[0][0]:target_start_end_tuples[0][1]]
     if len(contexts) >= min_number_contexts_for_fca_clustering:
         senses = fca_cluster(predicted,
                              n_sense_indicators=n_sense_descriptors)
-        logger.debug(f'fca_cluster produced {len(senses)} senses.')
+        logger.debug(f'For {target_phrase_in_fiurst_cintext} with {len(contexts)} contexts '
+                     f'fca_cluster produced {len(senses)} senses.')
     if not senses:  # fca_cluster did not produce results
         all_predicted = sum(predicted.values(), [])
-        top_predicted = [x[0] for x in Counter(all_predicted).most_common(
-            n_sense_descriptors)]
+        top_predicted = [x[0] for x in Counter(all_predicted).most_common(top_n_pred)]
         senses = [fca.Concept(intent=top_predicted,
                               extent=list(predicted.keys()))]
-        logger.debug(f'Most common predictions are taken as sense indicators.')
+        logger.debug(f'For {target_phrase_in_fiurst_cintext} with {len(contexts)} contexts '
+                     f'most common {len(top_predicted)} predictions are '
+                     f'taken as sense indicators.')
     return senses
