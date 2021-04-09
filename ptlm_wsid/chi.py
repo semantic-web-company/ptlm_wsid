@@ -71,6 +71,14 @@ def iter_senses(ner_agg: Dict[str, Iterable[int]],
                 start_ends: List[Tuple[int, int]],
                 lang='deu', cxts_limit=50, n_pred=50, target_pos='N',
                 n_sense_descriptors=10, th_att_len=4):
+    """
+    :param th_att_len: min length of produced substitute
+    :param n_pred: how many predictions are produced for each context
+    :param n_sense_descriptors: how many sense indicators - subset of all
+        predictions - are output for each sense
+    :param target_pos: the desired part of speach of predictions
+    :param lang: language. Used for POS tagging and lemmatization of predictions.
+    """
     pbar = tqdm(list(ner_agg.items()))
     total_examples = 0
     for ner_form, ner_inds in pbar:

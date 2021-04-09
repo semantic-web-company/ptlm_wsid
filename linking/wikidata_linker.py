@@ -146,7 +146,7 @@ class WikidataLinker(EntityLinker):
         logging.debug(str(len(matches))+" matches were found!"+"\n\t"+"\n\t".join([e["rawName"] for e in matches]))
         maxjaccard = minjaccard
         bestscore = minscore
-        bestmatching = "<https://no.entity.found>"
+        bestmatching = f"<{surface_form}>"
         for ent in matches:
             logging.debug(json.dumps(ent,indent=2))
             if any([x not in ent.keys() for x in ["wikidataId", "offsetStart", "offsetEnd"]]):

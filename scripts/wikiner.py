@@ -72,90 +72,90 @@ def iter_factors(cxt, fidelity=0.5, min_atts_and_objs=4, allow_repeatitions=Fals
         yield out_json
 
 
-def read_json_classes(folder: Path):
-    out = []
-    filenames = []
-
-    for filename in folder.glob(r'class*.json'):
-        with filename.open() as f:
-            contents = json.load(f)
-        out.append([contents['descriptors'], contents['entities']])
-        filenames.append(filename.name)
-    return out, filenames
-
-
-def read_factors(folder: Path):
-    descrs_pattern = re.compile(r'Descriptors:\n(([^\n]+\n)*)')
-    entities_pattern = re.compile(r'Entities:\n(([^\n]+\n?)*)')
-    out = []
-    filenames = []
-
-    for filename in folder.glob(r'class*.txt'):
-        with filename.open() as f:
-            contents = f.read()
-        m = re.search(descrs_pattern, contents)
-        descriptors = m.group(1).strip().split('\n')
-        m = re.search(entities_pattern, contents)
-        entities = m.group(1).strip().split('\n')
-        filenames.append(filename.name)
-        out.append((descriptors, entities))
-    return out, filenames
-
-
-def aggressive(cxt, chosen_classes, outpath='aggressive.txt'):
-    print('#' * 50)
-    print('Aggressive retagging of entities into selected classes')
-    print('#' * 50)
-    class2objs = defaultdict(list)
-    cls_objects = [cxt.aprime(cls) for cls in chosen_classes]
-    cls_atts_unions = [Counter(x for obj in cls_extent
-                               for x in cxt.get_object_intent(obj))
-                       for cls_extent in cls_objects]
-    for obj in cxt.objects:
-        obj_intent = cxt.get_object_intent(obj)
-        obj_scores = []
-        for cls_atts_union in cls_atts_unions:
-            score = (sum(cls_atts_union[a] for a in obj_intent) /
-                     sum(cls_atts_union.values()))
-            obj_scores.append(score)
-        obj_sense = chosen_classes[obj_scores.index(max(obj_scores))]
-        class2objs[', '.join(obj_sense)].append(obj)
-    with open(outpath, 'w') as f:
-        for chosen in chosen_classes:
-            chosen_str = ', '.join(chosen)
-            chosen_objs = class2objs[chosen_str]
-            intent_clss = Counter(obj.split('::')[-1].split('##')[0]
-                                  for obj in chosen_objs)
-            out = f'\n\nClass descriptors: {chosen_str}\n'
-            out += f'Total {len(chosen_objs)} entities acquired, their types:'
-            out += f'{intent_clss}\nEntities:\n'
-            out += ', '.join(chosen_objs)
-            f.write(out)
-
-
-def cautious(cxt, chosen_classes, outpath='cautious.txt'):
-    print('#' * 50)
-    print('Cautious retagging of entities into selected classes')
-    print('#' * 50)
-    out = ''
-    for intent in chosen_classes:
-        atts_extents = [cxt.get_attribute_extent(att) for att in intent]
-        obj_cnt = Counter(el for x in atts_extents for el in x)
-        att_cnt = Counter(obj_cnt.values())
-        th = round(max(len(att_cnt) / 2, len(att_cnt)*0.7))
-        intent_objs = [obj for obj, n_atts in obj_cnt.items() if n_atts >= th]
-        intent_clss = Counter(obj.split('::')[-1].split('##')[0]
-                              for obj in intent_objs)
-
-        out += (f'\n\nClass descriptors: {intent}\n' +
-                ', '.join(f"{n_objs} objects have {n_atts} descriptors"
-                          for n_atts, n_objs in att_cnt.items()) +
-                f'\nWe take only entities with at least {th} descriptors\n' +
-                f'Total {len(intent_objs)} entities acquired, their types:' +
-                f'{intent_clss}\nEntities:\n')
-        out += ', '.join(intent_objs)
-    with open(outpath, 'w') as f:
-        f.write(out)
+# def read_json_classes(folder: Path):
+#     out = []
+#     filenames = []
+#
+#     for filename in folder.glob(r'class*.json'):
+#         with filename.open() as f:
+#             contents = json.load(f)
+#         out.append([contents['descriptors'], contents['entities']])
+#         filenames.append(filename.name)
+#     return out, filenames
+#
+#
+# def read_factors(folder: Path):
+#     descrs_pattern = re.compile(r'Descriptors:\n(([^\n]+\n)*)')
+#     entities_pattern = re.compile(r'Entities:\n(([^\n]+\n?)*)')
+#     out = []
+#     filenames = []
+#
+#     for filename in folder.glob(r'class*.txt'):
+#         with filename.open() as f:
+#             contents = f.read()
+#         m = re.search(descrs_pattern, contents)
+#         descriptors = m.group(1).strip().split('\n')
+#         m = re.search(entities_pattern, contents)
+#         entities = m.group(1).strip().split('\n')
+#         filenames.append(filename.name)
+#         out.append((descriptors, entities))
+#     return out, filenames
+#
+#
+# def aggressive(cxt, chosen_classes, outpath='aggressive.txt'):
+#     print('#' * 50)
+#     print('Aggressive retagging of entities into selected classes')
+#     print('#' * 50)
+#     class2objs = defaultdict(list)
+#     cls_objects = [cxt.aprime(cls) for cls in chosen_classes]
+#     cls_atts_unions = [Counter(x for obj in cls_extent
+#                                for x in cxt.get_object_intent(obj))
+#                        for cls_extent in cls_objects]
+#     for obj in cxt.objects:
+#         obj_intent = cxt.get_object_intent(obj)
+#         obj_scores = []
+#         for cls_atts_union in cls_atts_unions:
+#             score = (sum(cls_atts_union[a] for a in obj_intent) /
+#                      sum(cls_atts_union.values()))
+#             obj_scores.append(score)
+#         obj_sense = chosen_classes[obj_scores.index(max(obj_scores))]
+#         class2objs[', '.join(obj_sense)].append(obj)
+#     with open(outpath, 'w') as f:
+#         for chosen in chosen_classes:
+#             chosen_str = ', '.join(chosen)
+#             chosen_objs = class2objs[chosen_str]
+#             intent_clss = Counter(obj.split('::')[-1].split('##')[0]
+#                                   for obj in chosen_objs)
+#             out = f'\n\nClass descriptors: {chosen_str}\n'
+#             out += f'Total {len(chosen_objs)} entities acquired, their types:'
+#             out += f'{intent_clss}\nEntities:\n'
+#             out += ', '.join(chosen_objs)
+#             f.write(out)
+#
+#
+# def cautious(cxt, chosen_classes, outpath='cautious.txt'):
+#     print('#' * 50)
+#     print('Cautious retagging of entities into selected classes')
+#     print('#' * 50)
+#     out = ''
+#     for intent in chosen_classes:
+#         atts_extents = [cxt.get_attribute_extent(att) for att in intent]
+#         obj_cnt = Counter(el for x in atts_extents for el in x)
+#         att_cnt = Counter(obj_cnt.values())
+#         th = round(max(len(att_cnt) / 2, len(att_cnt)*0.7))
+#         intent_objs = [obj for obj, n_atts in obj_cnt.items() if n_atts >= th]
+#         intent_clss = Counter(obj.split('::')[-1].split('##')[0]
+#                               for obj in intent_objs)
+#
+#         out += (f'\n\nClass descriptors: {intent}\n' +
+#                 ', '.join(f"{n_objs} objects have {n_atts} descriptors"
+#                           for n_atts, n_objs in att_cnt.items()) +
+#                 f'\nWe take only entities with at least {th} descriptors\n' +
+#                 f'Total {len(intent_objs)} entities acquired, their types:' +
+#                 f'{intent_clss}\nEntities:\n')
+#         out += ', '.join(intent_objs)
+#     with open(outpath, 'w') as f:
+#         f.write(out)
 
 
 def parse_conll_file(data_path: str, fields=('form', 'PoS', '2', 'tag'),
@@ -189,51 +189,99 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logging.config.fileConfig(config)
     logger.info(f'Config: {config.items("wikiner")}')
-
-    # with open(config['wikiner']['conll_data_path']) as f:
-    #     data = f.read()
-    #     data = re.sub(r' ', r'\t', data)
+    # config into vars
+    ners_pred_target_path = Path(config['wikiner']['ners_predictions_output'])
+    nes_in_cxts_path = Path(config['wikiner']['ner_contexts_output'])
+    language = config['wikiner']['language']
     t_limit = int(config['wikiner']['tokens_to_be_processed'])
-    data = parse_conll_file(config['wikiner']['conll_data_path'], n_tokens=t_limit)
-    logger.debug('Conll iter created')
-    all_forms, all_tags = list(zip(*list(data)))
-    ners, tags, contexts, start_ends = collect_ners(all_forms, all_tags, tokens_window=25)
-    logger.debug('NEs collected')
-    ner_agg = defaultdict(list)
-    for i, (ner, tag) in enumerate(zip(ners, tags)):
-        assert ner == contexts[i][start_ends[i][0]:start_ends[i][1]]
-        ner_agg[f'{ner}::{tag}'].append(i)
-    logger.info(f'Total {len(all_forms)} tokens, {len(ners)} NE occurrences, {len(ner_agg)} unique NEs')
-
-    if config['entity_linking']['linker'] == 'wikidata':
-        linker = WikidataLinker(
-            language=config['entity_linking']['language'],
-            el_url=config['entity_linking']['el_url']
-        )
-    elif config['entity_linking']['linker'] == 'dummy':
-        linker = DummyLinker()
+    conll_data_path = config['wikiner']['conll_data_path']
+    m = int(config['wikiner']['m'])
+    k = int(config['wikiner']['k'])
+    th_n_descriptors = int(config['wikiner']['th_type_descriptors'])
+    # Read data
+    if nes_in_cxts_path.exists():
+        logger.debug(f'Found {nes_in_cxts_path}, loading it.')
+        # load from an existing file
+        with open(nes_in_cxts_path) as f:
+            f.readline()  # skip the first line - headers
+            data_lines = f.readlines()
+        nes_tags, start_inds, end_inds, contexts, orig_uris = tuple(zip(*[line.split('\t') for line in data_lines if line.strip()]))
+        start_inds = tuple(map(int, start_inds))
+        end_inds = tuple(map(int, end_inds))
+        nes, tags = tuple(zip(*[x.split('::') for x in nes_tags]))
+        uris = []
+        for i, uri in enumerate(orig_uris):
+            if 'no.entity.found' in uri:
+                uris.append(nes[i])
+            else:
+                uris.append(uri)
     else:
-        raise ValueError(f"Linker {config['entity_linking']['linker']} is not implemented.")
-    with open(config['wikiner']['ner_contexts_output'], 'w') as f:
-        ner_cxt_lines = ['\t'.join(['NE::tag', 'Start offset', 'End offset', 'Context','URI'])]
-        ner_cxt_lines += ['\t'.join([ner_tag,
-                                     str(start_ends[i][0]),
-                                     str(start_ends[i][1]),
-                                     contexts[i],
-                                     linker.link_within_context(surface_form=ner_tag.split('::')[0],
-                                                                start_offset=start_ends[i][0],
-                                                                end_offset=start_ends[i][1],
-                                                                context=contexts[i])])
-                          for ner_tag, ner_inds in ner_agg.items()
-                          for i in ner_inds]
-        f.write('\n'.join(ner_cxt_lines))
+        logger.debug(f'No existing {nes_in_cxts_path} found.')
+        data = parse_conll_file(conll_data_path, n_tokens=t_limit)
+        logger.debug('Conll iter created')
+        all_forms, all_tags = tuple(zip(*list(data)))
+        nes, tags, contexts, start_ends = collect_ners(all_forms, all_tags, tokens_window=25)
+        start_inds, end_inds = tuple(zip(*start_ends))
+        logger.debug(f'NEs collected. Total {len(all_forms)} tokens processed.')
+        # define linker and do linking -> get URIs
+        if config['entity_linking']['linker'] == 'wikidata':
+            linker = WikidataLinker(
+                language=language,
+                el_url=config['entity_linking']['el_url']
+            )
+        elif config['entity_linking']['linker'] == 'dummy':
+            linker = DummyLinker()
+        else:
+            raise ValueError(f"Linker {config['entity_linking']['linker']} is not implemented.")
+        uris = []
+        for ne, si, ei, cxt in zip(nes, start_inds, end_inds, contexts):
+            uri = linker.link_within_context(surface_form=ne,
+                                             start_offset=si,
+                                             end_offset=ei,
+                                             context=cxt)
+            uris.append(uri)
+        # save results
+        ner_cxt_lines = ['\t'.join(['NE::tag', 'Start offset', 'End offset', 'Context', 'URI'])]
+        ner_cxt_lines += ['\t'.join([f'{ne}::{tag}', str(si), str(ei), cxt, uri])
+                          for ne, tag, cxt, si, ei, uri in zip(nes, tags, contexts, start_inds, end_inds, uris)]
+        with open(config['wikiner']['ner_contexts_output'], 'w') as f:
+            f.write('\n'.join(ner_cxt_lines))
+    # aggregate NEs based on URIs
+    ne_aggregate = defaultdict(list)
+    for i, uri in enumerate(uris):
+        ne_aggregate[f'{uri}'].append(i)
+    unique_ne_phrases = set(nes)
+    unique_ne_tag_pairs = set(zip(nes, tags))
+    logger.info(f'Total {len(nes)} NE occurrences, {len(ne_aggregate)} unique URIs, '
+                f'{len(unique_ne_phrases)} unique NE surface forms, '
+                f'{len(unique_ne_tag_pairs)} unique NE::tag pairs.')
+
+    #
+    if ners_pred_target_path.exists():
+        with open(ners_pred_target_path) as f:
+            ners_dict = json.load(f, indent=2)
+    else:
+        induction_lang = 'eng' if language == 'en' else 'deu' if language == 'de' else None
+        senses_iter = iter_senses(ne_aggregate, contexts, list(zip(start_inds, end_inds)),
+                                  lang=induction_lang, cxts_limit=50, n_pred=2*m,
+                                  n_sense_descriptors=k,
+                                  target_pos='N',
+                                  th_att_len=4)
+        ners_dict = dict()
+        for j, (ner_form, ner_senses) in enumerate(senses_iter):
+            if len(ner_senses) > 1:
+                for i, sense in enumerate(ner_senses):
+                    ners_dict[f'{ner_form}##{i}'] = list(sense)
+            else:
+                ners_dict[f'{ner_form}'] = list(ner_senses[0])
+            if j == 10:
+                intermediate_file_path = ners_pred_target_path.parent / (ners_pred_target_path.stem + f'{j}.json')
+                with open(intermediate_file_path, 'w') as f:
+                    json.dump(ners_dict, f, indent=2)
+        with open(ners_pred_target_path, 'w') as f:
+            json.dump(ners_dict, f, indent=2)
     assert False
 
-
-    # senses_iter = iter_senses(ner_agg, contexts, start_ends,
-    #                           lang=lang, cxts_limit=50, n_pred=50,
-    #                           n_sense_descriptors=n_sense_descriptors,
-    #                           target_pos='N', th_att_len=th_att_len)
     # for ner_form, ner_senses in senses_iter:
     #     yield ner_form, ner_senses
     #

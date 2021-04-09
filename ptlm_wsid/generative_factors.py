@@ -138,7 +138,6 @@ def induce(contexts: List[str],
         predictions - are output for each sense
     :param target_pos: the desired part of speach of predictions
     :param lang: language. Used for POS tagging and lemmatization of predictions
-    :param do_mask: if the target should be masked during predicting
     :param min_number_contexts_for_fca_clustering: minimum number of contexts
         to try the fca clustering. If there are only 1 or 2 then it often does
         not make sense to cluster.
