@@ -33,3 +33,12 @@ class DummyLinker(EntityLinker):
         uri = self.cache.get(key_, self._generate_uri(surface_form))
         self.cache[key_] = uri
         return uri
+
+    def doc(self):
+        s = """
+        This is a dummy implementation of an Entity Linker
+        It will link each surface form with a dummy entity.
+        It completely disregards the contexts of the entities.
+        Use only for testing.
+        
+        """

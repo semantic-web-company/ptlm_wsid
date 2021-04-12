@@ -3,8 +3,9 @@ import logging
 
 
 class EntityLinker(ABC):
-    # def __init__(self, **kwargs):
-    #     pass
+    """
+    Abstract class for an entity linked
+    """
 
     def _gen_key(self,
                  surface_form: str,
@@ -20,4 +21,11 @@ class EntityLinker(ABC):
 
     def link_standalone(self,
                         surface_form: str):
+        pass
+
+    def doc(self):
+        """
+        Should print and return a string explaining additional steps necessary to
+        use this linker.
+        """
         pass

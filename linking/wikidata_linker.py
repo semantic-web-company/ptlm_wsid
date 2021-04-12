@@ -9,21 +9,19 @@ import requests
 
 from linking.entity_linker import EntityLinker
 
-
-placeholder_texts ={"en": " is a concept we want to find",
-                    "de": " ist ein Begriff, den wir finden wollen",
-                    "es": " es un concepto que queremos encontrar"}
+placeholder_texts = {"en": " is a concept we want to find",
+                     "de": " ist ein Begriff, den wir finden wollen",
+                     "es": " es un concepto que queremos encontrar"}
 
 
 class WikidataLinker(EntityLinker):
-    # To run the fishing server
-    #  docker run --rm --name fishing_ctr -p 8090:8090 -v ${PWD}/data/db:/fishing/nerd/data/db/ -it fishing
     def __init__(self,
                  el_url: str = "http://localhost:8090",
                  wikidata_sparql: str = "https://query.wikidata.org/sparql",
                  linking_caches_directory: str = "/tmp",
                  language: str = "en"
                  ):
+
         self.linking_url = el_url
         self.sparql_endpoint = wikidata_sparql
         self.caches_dir = linking_caches_directory
@@ -41,12 +39,12 @@ class WikidataLinker(EntityLinker):
             self.caches_dir = None
 
         if self.caches_dir is not None:
-            self.label_cache_file = op.join(self.caches_dir,"Wikidata_"+language+"_labelcache.pkl")
-            self.linking_cache_file = op.join(self.caches_dir,"Wikidata_"+language+"_linkingcache.pkl")
+            self.label_cache_file = op.join(self.caches_dir, "Wikidata_" + language + "_labelcache.pkl")
+            self.linking_cache_file = op.join(self.caches_dir, "Wikidata_" + language + "_linkingcache.pkl")
             self.KG_cache_file = op.join(self.caches_dir, "Wikidata_" + language + "_KGcache.pkl")
 
             if op.isfile(self.label_cache_file):
-                with open(self.label_cache_file,"rb") as fin:
+                with open(self.label_cache_file, "rb") as fin:
                     self.label_cache = pickle.load(fin)
 
             if op.isfile(self.linking_cache_file):
@@ -58,6 +56,9 @@ class WikidataLinker(EntityLinker):
                     self.KG_cache = pickle.load(fin)
 
         self.language = language
+        if not self._test():
+            logging.error("Wikidata Linker initialization failed")
+            logging.info(self.doc())
         logging.info("Wikidata Linker initialized with language ", language)
 
     def write_cache(self):
@@ -92,13 +93,12 @@ class WikidataLinker(EntityLinker):
         self.KG_cache[concept] = response
         return response
 
-
     def query_fishing_disamb(self, text, max_retries=2):
         lang = self.language
         url = self.linking_url + "/service/disambiguate"
         strict_size = None
 
-        payload = { "language": {"lang" : lang }}
+        payload = {"language": {"lang": lang}}
         if len(text) > 6:
             payload["text"] = text
         else:
@@ -131,8 +131,8 @@ class WikidataLinker(EntityLinker):
                             start_offset: int,
                             end_offset: int,
                             context: str,
-                            minjaccard:int = 0.5,
-                            minscore:int = 0.2):
+                            minjaccard: int = 0.5,
+                            minscore: int = 0.2):
         key_ = self._gen_key(surface_form=surface_form,
                              context=context)
         if key_ in self.linking_cache:
@@ -143,17 +143,18 @@ class WikidataLinker(EntityLinker):
         if "entities" in resp.keys():
             matches = resp["entities"]
 
-        logging.debug(str(len(matches))+" matches were found!"+"\n\t"+"\n\t".join([e["rawName"] for e in matches]))
+        logging.debug(
+            str(len(matches)) + " matches were found!" + "\n\t" + "\n\t".join([e["rawName"] for e in matches]))
         maxjaccard = minjaccard
         bestscore = minscore
         bestmatching = f"<{surface_form}>"
         for ent in matches:
-            logging.debug(json.dumps(ent,indent=2))
+            logging.debug(json.dumps(ent, indent=2))
             if any([x not in ent.keys() for x in ["wikidataId", "offsetStart", "offsetEnd"]]):
-                logging.debug("\t skipping for no id" )
+                logging.debug("\t skipping for no id")
                 continue
             if ent["offsetStart"] > end_offset or ent["offsetEnd"] < start_offset:
-                logging.debug("\tskipping for no intersection "+ent.get("rawName","_"))
+                logging.debug("\tskipping for no intersection " + ent.get("rawName", "_"))
                 continue
 
             # the entity has to overlap with the surface_form in some percentage. here we compute it.
@@ -161,7 +162,7 @@ class WikidataLinker(EntityLinker):
             inter_end = min([ent["offsetEnd"], end_offset])
             union_start = min([ent["offsetStart"], start_offset])
             union_end = max([ent["offsetEnd"], end_offset])
-            jaccard = float(inter_end-inter_start)/(union_end-union_start)
+            jaccard = float(inter_end - inter_start) / (union_end - union_start)
 
             # if the entity has no scores, we take it
             # if it has some scores, we take it only if the best of them is not too bad
@@ -170,21 +171,19 @@ class WikidataLinker(EntityLinker):
                 scores.append(float(ent["nerd_selection_score"]))
             if "nerd_score" in ent.keys():
                 scores.append(float(ent["nerd_score"]))
-            if len(scores)==0:
+            if len(scores) == 0:
                 score = minscore + 0.01
             else:
                 score = max(scores)
 
-            if score > bestscore*0.8 and jaccard > maxjaccard:
-                bestmatching = "<http://www.wikidata.org/entity/"+ent["wikidataId"]+">"
+            if score > bestscore * 0.8 and jaccard > maxjaccard:
+                bestmatching = "<http://www.wikidata.org/entity/" + ent["wikidataId"] + ">"
                 maxjaccard = jaccard
             else:
-                logging.debug("\tnot good enough "+str(jaccard)+"_"+str(score))
-
+                logging.debug("\tnot good enough " + str(jaccard) + "_" + str(score))
 
         self.linking_cache[key_] = bestmatching
         return bestmatching
-
 
     def link_standalone(self,
                         surface_form: str):
@@ -195,3 +194,31 @@ class WikidataLinker(EntityLinker):
                                         context=artificial_context,
                                         start_offset=0,
                                         end_offset=len(surface_form))
+
+    def _test(self):
+        try:
+            self.link_standalone("Albert Einstein")
+            return True
+        except:
+            return False
+
+    def doc(self):
+        s = """
+        This class wraps access to Entity Fishing (https://github.com/kermitt2/entity-fishing)
+        To set up entity fishing, do the following:
+        0) Make sure you have docker installed, and some 20GB of storage available
+        1) Create a new directory. In this directory:
+        2)  ` wget https://science-miner.s3.amazonaws.com/entity-fishing/0.0.3/linux/db-de.zip `
+            ` wget https://science-miner.s3.amazonaws.com/entity-fishing/0.0.3/linux/db-en.zip `
+            ` wget https://science-miner.s3.amazonaws.com/entity-fishing/0.0.3/linux/db-kb.zip `
+            ` unzip db-de.zip `
+            ` unzip db-kb.zip `
+            ` unzip db-en.zip `
+        3) ` docker run --rm --name fishing_ctr -p 8090:8090 -v ${PWD}/db:/fishing/nerd/data/db/ -it syats/fishing:0.6.0 `
+
+        If you change the port number in the last command, or you deploy the container in a different machine
+        you need to provide the ` el_url ` argument to the constructor.
+
+        """
+        print(s)
+        return s
