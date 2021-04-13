@@ -20,6 +20,7 @@ all_entities = collect_entities(induced_candidates)
 
 for linker in [DummyLinker()]:
     # Linking results
+
     all_super_counts = link_and_find_all_broaders(all_entities, linker)
     per_candidate_super_counts = link_and_find_broaders(induced_candidates, linker)
 

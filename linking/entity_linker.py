@@ -19,9 +19,9 @@ class EntityLinker(ABC):
                             context: str):
         pass
 
-    def link_standalone(self,
-                        surface_form: str):
-        pass
+    # def link_standalone(self,
+    #                     surface_form: str):
+    #     pass
 
     def find_broaders(self, uri: str):
         pass
