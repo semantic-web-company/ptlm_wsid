@@ -1,7 +1,8 @@
 import os.path as op
 
 from linking.wikidata_linker import WikidataLinker
-from utils import config, this_dir, collect_entities
+from linking.dummy_linker import DummyLinker
+from utils import config, this_dir, collect_entities, logger
 from broader_analysis import link_and_find_broaders, link_and_find_all_broaders, best_broaders
 from randomization import create_random_candidates
 from readers import  load_candidates
@@ -17,7 +18,7 @@ num_random = 100
 induced_candidates = load_candidates(induction_result_directory)
 all_entities = collect_entities(induced_candidates)
 
-for linker in [WikidataLinker()]:
+for linker in [DummyLinker()]:
     # Linking results
     all_super_counts = link_and_find_all_broaders(all_entities, linker)
     per_candidate_super_counts = link_and_find_broaders(induced_candidates, linker)

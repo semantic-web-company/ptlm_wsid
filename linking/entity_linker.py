@@ -23,6 +23,9 @@ class EntityLinker(ABC):
                         surface_form: str):
         pass
 
+    def find_broaders(self, uri: str):
+        pass
+
     def doc(self):
         """
         Should print and return a string explaining additional steps necessary to

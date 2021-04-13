@@ -21,13 +21,17 @@ def load_candidates(file_path: str,
     while True:
         try:
             fname = pattern % fnum
-            with open(fname) as fin:
+            with open(op.join(file_path,fname)) as fin:
                 jstr = fin.read()
-                j = json.load(jstr)
+                j = json.loads(jstr)
                 result.append(j)
-        except:
+            fnum +=1
+        except Exception as e:
+            logging.error("error loading file "+str(fname)+"\n\t"+str(e))
+            if len(result)==0:
+                logging.exception(str(e))
             break
-            logging.error("error loading file "+str(fname))
-            raise ValueError
+    logging.info("Loaded up to file ",pattern%(fnum-1),
+                 "in total ",len(result), "candidates")
     return result
 

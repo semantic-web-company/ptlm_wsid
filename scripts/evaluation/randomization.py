@@ -1,5 +1,6 @@
 from typing import List, Dict, Set
 import random as ran
+import logging
 
 
 def create_random_candidates(induced_candidates: List[Dict],
@@ -18,7 +19,7 @@ def create_random_candidates(induced_candidates: List[Dict],
     result = []
     all_entities_constant = []
     for ic in induced_candidates:
-        all_entities_constant.append(ic["entities"])
+        all_entities_constant += ic["entities"]
 
     for nr in range(num_random):
         all_entities = all_entities_constant.copy()
@@ -27,9 +28,13 @@ def create_random_candidates(induced_candidates: List[Dict],
         ran.shuffle(all_entities)
         for sn, siz in enumerate(candidate_sizes):
             ents = list()
+            numattemps = 0
             while len(set(ents)) != siz:
                 ran.shuffle(all_entities)
                 ents = all_entities[:siz]
+                numattemps += 1
+                if numattemps > 10:
+                    logging.error("coundn't find a replicate after "+str(numattemps))
             all_entities = all_entities[siz:]
             di = {"entities": ents,
                   "descriptors": ["replicate_" + str(nr),

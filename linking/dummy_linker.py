@@ -1,7 +1,7 @@
 from linking.entity_linker import EntityLinker
 import uuid
 import logging
-
+from linking.utils import is_uri
 
 class DummyLinker(EntityLinker):
 
@@ -15,6 +15,20 @@ class DummyLinker(EntityLinker):
         ln = "_".join(localname.lower().split())
         # return "<https://some.uri/" + str(uuid.uuid4()) + "/" + ln + ">"
         return f"<{ln}>"
+
+    def find_broaders(self, ent: str):
+        if is_uri(ent):
+            if "#" in ent:
+                ln = ent.split("#")[-1]
+            else:
+                ln = ent.split("/")[-1]
+        else:
+            ln = "_".join(ent.split())
+        numbroaders = min([5, len(ln)])
+        broaders = ["<https://broaders.url/" + ln[i].upper()+str(i) + ">"
+                    for i in range(numbroaders)]
+
+        return broaders
 
     def link_within_context(self,
                             surface_form: str,
