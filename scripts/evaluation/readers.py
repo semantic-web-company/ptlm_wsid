@@ -14,7 +14,7 @@ def load_candidates(file_path: str,
 
     """
     if not op.isdir(file_path):
-        logging.error("Path for candidates is invalid")
+        logging.error("Path for new_types is invalid")
         raise ValueError
     result = []
     fnum = 0
@@ -27,11 +27,11 @@ def load_candidates(file_path: str,
                 result.append(j)
             fnum +=1
         except Exception as e:
-            logging.error("error loading file "+str(fname)+"\n\t"+str(e))
             if len(result)==0:
+                logging.error("error loading file " + str(fname) + "\n\t" + str(e))
                 logging.exception(str(e))
             break
     logging.info("Loaded up to file ",pattern%(fnum-1),
-                 "in total ",len(result), "candidates")
+                 "in total ",len(result), "new_types")
     return result
 

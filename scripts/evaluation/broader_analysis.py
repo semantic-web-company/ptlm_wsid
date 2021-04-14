@@ -11,7 +11,7 @@ def link_and_find_broaders(candidates: List[Dict],
 
     @param candidates:
     @param linker:
-    @return: a list of candidates, with an extra key called "broader_counts" which is a dictionary
+    @return: a list of new_types, with an extra key called "broader_counts" which is a dictionary
     """
     result = []
     if linker is None:
@@ -48,33 +48,58 @@ def link_and_find_all_broaders(entities: Set[str],
     return result
 
 
-def best_broaders(all_super_counts: Dict,
+def best_broaders(supers_for_all_entities: Dict,
                   per_candidate_links_and_supers: List[Dict],
-                  num_best: int = 5):
+                  num_best: int = 5,
+                  super_counts_field: str = "broader_counts"):
     """
+    Returns the best matching super for a candidate class, according to a list of supers for entities in the class
+    and entities in the whole corpus. If comparing to a taxonomy, a super is a broader.
 
-    @param super_counts:
-    @param per_candidate_links_and_supers:
-    @param num_best:
-    @return: for every candidate class, the num_best best matching broaders and their log odds ratio
+    @param super_counts_field:
+    @param super_counts: a dictionary that has, for every possible entity, the supers it belongs to
+    @param per_candidate_links_and_supers:  a list of dictionaries, one per candidate. Fro each, at least
+    two fields are expected "entities" containing the list of entities, and that given by super_counts_field
+    which is, in turn, a dictionary whose keys are supers and whose values are the number of entities in that
+    candidate having this broad
+    @param num_best: maximum number of best matching supers to be returned
+    @return: for every candidate class, the num_best best matching supers and their log odds ratio
     """
     result = []
     global_counts = dict()
-    for ent, bros in all_super_counts.items():
+    for ent, bros in supers_for_all_entities.items():
         for bro in bros:
             global_counts[bro] = global_counts.get(bro, 0) + 1
 
+    onlytopmost = []
     for can in per_candidate_links_and_supers:
-        counts = can["broader_counts"]
-        countslist = list(counts.items())
-        # ToDo: Here we must substitute for log odds ratio actual computation
-        countslist.sort(key=lambda x: float(x[1]) / global_counts.get(x[0], 1))
-        countslist.reverse()
-        maxbroads = min(len(countslist), num_best)
+
+        # For this entity, the following dictionaries have an element for every possible super
+        # Using notation from the paper
+        # T_cc  : The number of entities narrower to a candidate which are tagged with NER typeT
+        T_cc = can[super_counts_field]
+        # T_w  :  is the number of entities in the wholecorpus tagged with  T
+        T_w = {y: global_counts[y] for y in T_cc.keys()}
+        # w : the total number of entities in the whole corpus
+        w = float(len(supers_for_all_entities))
+        # cc : the total number of entities in this candidate
+        cc = float(len(can["entities"]))
+
+        # dict of the form  super : log_odds
+        log_odds_per_super = {x: math.log((T_cc[x] / cc) / (T_w[x] / w))
+                              for x in T_cc.keys()}
+
+        logslist = list(log_odds_per_super.items())
+        logslist.sort(key= lambda x: x[1])
+        logslist.reverse()
+
+        maxbroads = min(len(logslist), num_best)
         logodds = []
         for bi in range(maxbroads):
-
-            logodds.append({"broader": countslist[bi][0],
-                            "loggods": math.log(countslist[bi][1])})
-
+            logodds.append({"broader": logslist[bi][0],
+                            "loggods": logslist[bi][1]})
         can["log_odds"] = logodds
+        onlytopmost.append(logslist[0][1])
+
+    return onlytopmost
+

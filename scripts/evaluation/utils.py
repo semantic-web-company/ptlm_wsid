@@ -20,6 +20,34 @@ config.read(config_paths)
 logger = logging.getLogger()
 
 
+def get_params_from_dirname(dirname: str,
+                            parnames: List[str] = ["k", "th", "m"]):
+    if dirname.endswith("/"):
+        comptokens = dirname.split("/")[-2]
+        mtokens = dirname.split("/")[-2]
+    else:
+        comptokens = dirname.split("/")[-1]
+        mtokens = dirname.split("/")[-2]
+
+    comptokens = comptokens+"_"+mtokens
+    pardict = {}
+    parlist = comptokens.split("_")
+    for pp in parlist:
+        for pn in parnames:
+            if pp.startswith(pn):
+                valstr = pp[len(pn):]
+                if "." in valstr:
+                    val = float(valstr)
+                else:
+                    val = int(valstr)
+                pardict[pn] = val
+                break
+
+    return pardict
+
+
+
+
 
 def collect_entities(candidates: List[Dict]):
     allentities = set()

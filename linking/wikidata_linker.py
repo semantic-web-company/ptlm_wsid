@@ -19,7 +19,8 @@ class WikidataLinker(EntityLinker):
                  el_url: str = "http://localhost:8090",
                  wikidata_sparql: str = "https://query.wikidata.org/sparql",
                  linking_caches_directory: str = "/tmp",
-                 language: str = "en"
+                 language: str = "en",
+                 cache_writes_before_persist: int = 200,
                  ):
 
         self.linking_url = el_url
@@ -32,6 +33,11 @@ class WikidataLinker(EntityLinker):
         self.label_cache_file = None
         self.linking_cache_file = None
         self.KG_cache_file = None
+
+        self.KGcache_misses = 0
+        self.label_cache_misses = 0
+        self.linking_cache_misses = 0
+        self.cache_misses_before_persist = 0
 
         if self.caches_dir is not None and not op.exists(self.caches_dir):
             logging.error("Cache dir was supplied for Wikidata linker, but it doesn't exist")
@@ -61,24 +67,61 @@ class WikidataLinker(EntityLinker):
             logging.info(self.doc())
         logging.info("Wikidata Linker initialized with language ", language)
 
-    def write_cache(self):
-        if self.caches_dir is not None:
+    def _write_cache(self, onlyExpired=False):
+        if self.caches_dir is None:
+            return None
+        writeKG = writeLinking = writeLabel = False
+        if onlyExpired:
+            if self.linking_cache_misses > self.cache_misses_before_persist:
+                writeLinking = True
+                self.linking_cache_misses = 0
+            if self.label_cache_misses > self.cache_misses_before_persist:
+                writeLabel = True
+                self.label_cache_misses = 0
+            if self.KGcache_misses > self.cache_misses_before_persist:
+                writeKG = True
+                self.KGcache_misses = 0
+        else:
+            writeKG = writeLinking = writeLabel = False
+
+        if writeKG:
             with open(self.KG_cache_file, "wb") as fout:
                 pickle.dump(self.KG_cache, fout)
+        if writeLinking:
             with open(self.linking_cache_file, "wb") as fout:
                 pickle.dump(self.linking_cache, fout)
+        if writeLabel:
             with open(self.label_cache_file, "wb") as fout:
                 pickle.dump(self.label_cache, fout)
 
-    def clear_cache(self):
+    def _clear_cache(self):
         self.label_cache = dict()
         self.linking_cache = dict()
         self.KG_cache = dict()
 
-    def _query_fishing_kb(self, concept, max_retries=2):
+    def _get_categories(self, URI, lang="de"):
+        if (type(URI) is dict) and ('wikidataId' in URI.keys()):
+            URI = URI["wikidataId"]
+        r = self._query_fishing_kb(URI, lang=lang)
+        j = json.loads(r.text.encode('utf8'))
+        results = dict()
+        if 'statements' not in j.keys():
+            return []
+        for cat in [s for s in j['statements'] if s['propertyId'] == "P31"]:
+            if "valueName" in cat.keys():
+                name = cat["valueName"]
+            else:
+                name = self._get_entity_label(wid=cat["value"], lang=lang)
+            results[cat["value"]] = name
+            # results.add({"wikidataId":cat["value"], "name":cat['valueName']})
+        resultset = [{"wikidataId": k, "name": v} for k, v in results.items()]
+        self._write_cache(onlyExpired=True)
+
+        return resultset
+
+    def _query_fishing_kb(self, concept, max_retries=2, lang="de"):
         if concept in self.KG_cache.keys():
             return self.KG_cache[concept]
-        lang = self.language
         retries = 0
         url = self.linking_url + "/service/kb/concept/" + str(concept) + "?lang=" + lang
         response = None
@@ -91,9 +134,10 @@ class WikidataLinker(EntityLinker):
             print("Failed for ", concept, end=".  ")
             response = []
         self.KG_cache[concept] = response
+        self.KGcache_misses += 1
         return response
 
-    def query_fishing_disamb(self, text, max_retries=2):
+    def _query_fishing_disamb(self, text, max_retries=2):
         lang = self.language
         url = self.linking_url + "/service/disambiguate"
         strict_size = None
@@ -126,6 +170,32 @@ class WikidataLinker(EntityLinker):
         ln = "_".join(localname.lower().split())
         return "<https://some.uri/" + str(uuid.uuid4()) + "/" + ln + ">"
 
+    def _get_entity_label(self, wid, lang):
+        if (wid, lang) in self.label_cache.keys():
+            return self.label_cache[(wid, lang)]
+        url = "http://www.wikidata.org/entity/" + wid
+        headers = {
+            'Accept': 'application/json'
+        }
+        try:
+            response = requests.request("GET", url, headers=headers)
+            rj = response.json()
+            ents = rj["entities"]
+            entks = list(ents.keys())
+            entk = wid if wid in entks else entks[0]
+            labs = ents[entk]["labels"]
+            for l, ld in labs.items():
+                if l[:2] == lang:
+                    self.label_cache[(wid, lang)] = ld["value"]
+                    return ld["value"]
+        except:
+            print("\t", wid, ""'s', lang, "label not found in wikidata")
+        self.label_cache[(wid, lang)] = wid
+        self.label_cache_misses += 1
+
+
+        return wid
+
     def link_within_context(self,
                             surface_form: str,
                             start_offset: int,
@@ -139,7 +209,7 @@ class WikidataLinker(EntityLinker):
             return self.linking_cache[key_]
 
         matches = []
-        resp = self.query_fishing_disamb(text=context)
+        resp = self._query_fishing_disamb(text=context)
         if "entities" in resp.keys():
             matches = resp["entities"]
 
@@ -183,6 +253,8 @@ class WikidataLinker(EntityLinker):
                 logging.debug("\tnot good enough " + str(jaccard) + "_" + str(score))
 
         self.linking_cache[key_] = bestmatching
+        self.linking_cache_misses += 1
+        self._write_cache(onlyExpired=True)
         return bestmatching
 
     def link_standalone(self,
@@ -194,6 +266,9 @@ class WikidataLinker(EntityLinker):
                                         context=artificial_context,
                                         start_offset=0,
                                         end_offset=len(surface_form))
+
+    def find_broaders(self, uri:str):
+        self._get_categories(URI=uri, lang=self.language)
 
     def _test(self):
         try:
