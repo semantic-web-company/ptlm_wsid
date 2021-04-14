@@ -16,14 +16,14 @@ class EntityLinker(ABC):
                             surface_form: str,
                             start_offset: int,
                             end_offset: int,
-                            context: str):
+                            context: str) -> str:
         pass
 
     # def link_standalone(self,
     #                     surface_form: str):
     #     pass
 
-    def find_broaders(self, uri: str):
+    def find_broaders(self, uri: str) -> list:
         pass
 
     def doc(self):
