@@ -8,9 +8,9 @@ from linking.wikidata_linker import WikidataLinker
 from linking.dummy_linker import DummyLinker
 from utils import config, this_dir, collect_entities, logger, get_params_from_dirname
 from broader_analysis import link_and_find_broaders, link_and_find_all_broaders, best_broaders
-from randomization import create_random_candidates
-from quantitative_evaluation import oddsratios_probs_vs_random
-from readers import  load_candidates
+from utils import create_random_candidates
+from utils import oddsratios_probs_vs_random
+from utils import  load_candidates
 from plotting import plot_against_randomized
 
 num_random = 100
@@ -31,7 +31,7 @@ for mdir in m_dirs:
             break
         all_entities = collect_entities(induced_candidates)
 
-        for linker in [DummyLinker(), WikidataLinker()]:
+        for linker in [DummyLinker()]:# , WikidataLinker()]:
             # Linking results
             broaders_for_all_entities = link_and_find_all_broaders(all_entities, linker)
             per_candidate_broader_counts = link_and_find_broaders(induced_candidates, linker)

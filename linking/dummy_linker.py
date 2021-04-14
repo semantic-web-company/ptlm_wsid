@@ -16,14 +16,14 @@ class DummyLinker(EntityLinker):
         # return "<https://some.uri/" + str(uuid.uuid4()) + "/" + ln + ">"
         return f"<{ln}>"
 
-    def find_broaders(self, ent: str):
-        if is_uri(ent):
-            if "#" in ent:
-                ln = ent.split("#")[-1]
+    def find_broaders(self, uri: str):
+        if is_uri(uri):
+            if "#" in uri:
+                ln = uri.split("#")[-1]
             else:
-                ln = ent.split("/")[-1]
+                ln = uri.split("/")[-1]
         else:
-            ln = "_".join(ent.split())
+            ln = "_".join(uri.split())
         numbroaders = min([5, len(ln)])
         broaders = ["<https://broaders.url/" + ln[i].upper()+str(i) + ">"
                     for i in range(numbroaders)]

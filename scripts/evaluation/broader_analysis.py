@@ -42,7 +42,7 @@ def link_and_find_all_broaders(entities: Set[str],
         linker = DuLi()
     result = dict()
     for ent in entities:
-        broaders = linker.find_broaders(ent=ent)
+        broaders = linker.find_broaders(uri=ent)
         result[ent] = broaders
 
     return result

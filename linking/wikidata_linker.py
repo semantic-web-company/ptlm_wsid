@@ -124,6 +124,7 @@ class WikidataLinker(EntityLinker):
             return self.KG_cache[concept]
         retries = 0
         url = self.linking_url + "/service/kb/concept/" + str(concept) + "?lang=" + lang
+        print("URL is : ", url)
         response = None
         while response is None and retries < max_retries:
             try:
