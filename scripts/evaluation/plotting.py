@@ -10,9 +10,11 @@ def plot_against_randomized(log_odds_of_induced,
                             numticks: int = 5,
                             lang: str = "en",
                             colorrandom: str = "orange",
-                            colorhist: str = "cornflowerblue"):
+                            colorhist: str = "cornflowerblue",
+                            figsufix="",
+                            extratext=None):
 
-    P.figure(title)
+    P.figure(title+figsufix)
     odds_random = [item for sublist in randomized_logodds for item in sublist]
     maxratio = max(log_odds_of_induced + odds_random)
     minratio = min(log_odds_of_induced + odds_random)
@@ -42,3 +44,8 @@ def plot_against_randomized(log_odds_of_induced,
         hs = kernel(stops)
         lo = P.plot(stops, 1.5 * max(allheights) * hs / max(hs), '-', label="Random", color=colorrandom)
 
+
+    if figsufix is not "":
+        P.title(figsufix)
+    if extratext is not None:
+        P.legend(title=extratext)

@@ -9,7 +9,7 @@ import os.path as op
 from scipy import stats
 import numpy as np
 import json
-
+import functools
 
 parser = argparse.ArgumentParser(description='Type induction on WikiNer corpus.')
 parser.add_argument('config_path',
@@ -29,9 +29,23 @@ def oddsratios_probs_vs_random(log_odds_of_induced,
                                randomized_logodds):
     odds_random = [item for sublist in randomized_logodds for item in sublist]
     kernel = stats.gaussian_kde(odds_random)
-    probs = kernel(log_odds_of_induced)
-
+    probs = [1 - kernel.integrate_box_1d(min(odds_random)-1, loid) for loid in log_odds_of_induced]
+    #print("\n")
+    #print("loginduced", log_odds_of_induced)
+    #print("probs: ", probs)
+    pprod = functools.reduce(lambda x, y: x * y, probs)
+    #print("\t>", np.mean(probs), pprod, max(probs), sep="\t")
     return np.mean(probs)
+
+
+def oddsratios_from_mean_of_random(log_odds_of_induced,
+                                   randomized_logodds,
+                                   dev_thrs=2):
+    odds_random = [item for sublist in randomized_logodds for item in sublist]
+    meanrandom = np.mean(odds_random)
+    stdrandom = np.std(odds_random)
+    return len([x for x in log_odds_of_induced
+            if (x-meanrandom) > dev_thrs*stdrandom])
 
 
 def load_candidates(file_path: str,
@@ -51,21 +65,19 @@ def load_candidates(file_path: str,
     while True:
         try:
             fname = pattern % fnum
-            with open(op.join(file_path,fname)) as fin:
+            with open(op.join(file_path, fname)) as fin:
                 jstr = fin.read()
                 j = json.loads(jstr)
                 result.append(j)
-            fnum +=1
+            fnum += 1
         except Exception as e:
-            if len(result)==0:
+            if len(result) == 0:
                 logging.error("error loading file " + str(fname) + "\n\t" + str(e))
                 logging.exception(str(e))
             break
-    logging.info("Loaded up to file ",pattern%(fnum-1),
-                 "in total ",len(result), "new_types")
+    logging.info("Loaded up to file ", pattern % (fnum - 1),
+                 "in total ", len(result), "new_types")
     return result
-
-
 
 
 def create_random_candidates(induced_candidates: List[Dict],
@@ -87,8 +99,9 @@ def create_random_candidates(induced_candidates: List[Dict],
         all_entities_constant += ic["entities"]
 
     for nr in range(num_random):
+        totfails = 12
         finished = False
-        while not finished:
+        while not finished and totfails>0:
             all_entities = all_entities_constant.copy()
             this_replicate = []
             finished = True
@@ -103,6 +116,7 @@ def create_random_candidates(induced_candidates: List[Dict],
                     numattemps += 1
                     if numattemps > 10:
                         finished = False
+                        totfails -= 1
                         break
                 all_entities = all_entities[siz:]
                 di = {"entities": ents,
@@ -111,6 +125,7 @@ def create_random_candidates(induced_candidates: List[Dict],
                 this_replicate.append(di)
             result.append(this_replicate)
     return result
+
 
 def get_params_from_dirname(dirname: str,
                             parnames: List[str] = ["k", "th", "m"]):
@@ -121,7 +136,7 @@ def get_params_from_dirname(dirname: str,
         comptokens = dirname.split("/")[-1]
         mtokens = dirname.split("/")[-2]
 
-    comptokens = comptokens+"_"+mtokens
+    comptokens = comptokens + "_" + mtokens
     pardict = {}
     parlist = comptokens.split("_")
     for pp in parlist:
@@ -138,13 +153,9 @@ def get_params_from_dirname(dirname: str,
     return pardict
 
 
-
-
-
 def collect_entities(candidates: List[Dict]):
     allentities = set()
     for candidate in candidates:
         allentities = allentities | set(candidate["entities"])
 
     return allentities
-

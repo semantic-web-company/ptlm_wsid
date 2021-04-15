@@ -8,6 +8,7 @@ import json
 import requests
 
 from linking.entity_linker import EntityLinker
+from linking.utils import is_uri
 
 placeholder_texts = {"en": " is a concept we want to find",
                      "de": " ist ein Begriff, den wir finden wollen",
@@ -21,8 +22,10 @@ class WikidataLinker(EntityLinker):
                  linking_caches_directory: str = "/tmp",
                  language: str = "en",
                  cache_writes_before_persist: int = 200,
+                 transitive_broaders=True
                  ):
 
+        self.properties_as_broaders = ["P279", "P31"]
         self.linking_url = el_url
         self.sparql_endpoint = wikidata_sparql
         self.caches_dir = linking_caches_directory
@@ -30,6 +33,7 @@ class WikidataLinker(EntityLinker):
         self.label_cache = dict()
         self.linking_cache = dict()
         self.KG_cache = dict()
+        self.broaders_cache = dict()
         self.label_cache_file = None
         self.linking_cache_file = None
         self.KG_cache_file = None
@@ -37,7 +41,8 @@ class WikidataLinker(EntityLinker):
         self.KGcache_misses = 0
         self.label_cache_misses = 0
         self.linking_cache_misses = 0
-        self.cache_misses_before_persist = 0
+        self.cache_misses_before_persist = cache_writes_before_persist
+        self.transitive_broaders = transitive_broaders
 
         if self.caches_dir is not None and not op.exists(self.caches_dir):
             logging.error("Cache dir was supplied for Wikidata linker, but it doesn't exist")
@@ -82,8 +87,9 @@ class WikidataLinker(EntityLinker):
                 writeKG = True
                 self.KGcache_misses = 0
         else:
-            writeKG = writeLinking = writeLabel = False
-
+            writeKG = writeLinking = writeLabel = True
+        if any([writeKG, writeLinking, writeLabel]):
+            print("# Writing caches Wikiner (KG,Li,La) ", str([writeKG, writeLinking, writeLabel]))
         if writeKG:
             with open(self.KG_cache_file, "wb") as fout:
                 pickle.dump(self.KG_cache, fout)
@@ -124,7 +130,7 @@ class WikidataLinker(EntityLinker):
             return self.KG_cache[concept]
         retries = 0
         url = self.linking_url + "/service/kb/concept/" + str(concept) + "?lang=" + lang
-        print("URL is : ", url)
+        # print("URL is : ", url)
         response = None
         while response is None and retries < max_retries:
             try:
@@ -193,7 +199,6 @@ class WikidataLinker(EntityLinker):
             print("\t", wid, ""'s', lang, "label not found in wikidata")
         self.label_cache[(wid, lang)] = wid
         self.label_cache_misses += 1
-
 
         return wid
 
@@ -268,8 +273,39 @@ class WikidataLinker(EntityLinker):
                                         start_offset=0,
                                         end_offset=len(surface_form))
 
-    def find_broaders(self, uri:str):
-        self._get_categories(URI=uri, lang=self.language)
+    def find_broaders(self, uri: str, numtrans: int = 1):
+        try:
+            if is_uri(uri):
+                uri = uri[1:-1].split("/")[-1]
+        except:
+            print(uri)
+            raise ValueError
+        if uri in self.broaders_cache.keys():
+            return self.broaders_cache[uri]
+        results = []
+        r = self._query_fishing_kb(uri, lang=self.language)
+        try:
+            j = json.loads(r.text.encode('utf8'))
+        except:
+            logging.info("asked for broaders of this weird entity:  " + uri)
+            return results
+
+        if 'statements' not in j.keys():
+            return []
+        for cat in [s for s in j['statements'] if s['propertyId'] in self.properties_as_broaders]:
+            # if "valueName" in cat.keys():
+            #    name = cat["valueName"]
+            # else:
+            # name = self._get_entity_label(wid=cat["value"], lang=self.language)
+            results.append("<http://www.wikidata.org/entity/"+cat["value"]+">")
+            if self.transitive_broaders and numtrans > 0:
+                tent = cat["value"]
+                results2 = self.find_broaders(tent, numtrans=numtrans - 1)
+                results += results2
+
+        res = list(set(results))
+        self.broaders_cache[uri] = res
+        return res
 
     def _test(self):
         try:

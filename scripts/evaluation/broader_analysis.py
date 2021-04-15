@@ -51,7 +51,9 @@ def link_and_find_all_broaders(entities: Set[str],
 def best_broaders(supers_for_all_entities: Dict,
                   per_candidate_links_and_supers: List[Dict],
                   num_best: int = 5,
-                  super_counts_field: str = "broader_counts"):
+                  super_counts_field: str = "broader_counts",
+                  doprint=False,
+                  representativeness_threshold=0.1):
     """
     Returns the best matching super for a candidate class, according to a list of supers for entities in the class
     and entities in the whole corpus. If comparing to a taxonomy, a super is a broader.
@@ -77,7 +79,10 @@ def best_broaders(supers_for_all_entities: Dict,
         # For this entity, the following dictionaries have an element for every possible super
         # Using notation from the paper
         # T_cc  : The number of entities narrower to a candidate which are tagged with NER typeT
-        T_cc = can[super_counts_field]
+        T_cc = {x:y for x,y in can[super_counts_field].items()
+                if y > representativeness_threshold*len(can["entities"])}
+        if len(T_cc)==0:
+            T_cc = {x: y for x, y in can[super_counts_field].items()}
         # T_w  :  is the number of entities in the wholecorpus tagged with  T
         T_w = {y: global_counts[y] for y in T_cc.keys()}
         # w : the total number of entities in the whole corpus
@@ -96,10 +101,13 @@ def best_broaders(supers_for_all_entities: Dict,
         maxbroads = min(len(logslist), num_best)
         logodds = []
         for bi in range(maxbroads):
-            logodds.append({"broader": logslist[bi][0],
+            logodds.append({"brandomized_candidatesroader": logslist[bi][0],
                             "loggods": logslist[bi][1]})
         can["log_odds"] = logodds
-        onlytopmost.append(logslist[0][1])
+        if doprint:
+            print("\t\t---",", ".join([str(x[1]) for x in logslist[:maxbroads]]))
+        if len(logslist)>0:
+            onlytopmost.append(logslist[0][1])
 
     return onlytopmost
 

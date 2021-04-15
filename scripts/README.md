@@ -36,6 +36,14 @@ Example for English `en`. For German change `en` to `de`.
       ```
    3. Check the results in at `new_types_output_folder`.
 4. Compute the evaluation results.    
+   See the config file `wikiner_en_config_VICTOR.conf` and create one for your setup. 
+   You must take care of the base_dir variable. 
+   Call the resulting file `wikiner_en_config_EVAL.conf`
+   1. run
+         ```bash
+      python3 evaluation/evaluation_pipeline.py configs/wikiner_en_config_EVAL.conf
+      ```
+
 
 
 #### to make use of entity linking using wikidata

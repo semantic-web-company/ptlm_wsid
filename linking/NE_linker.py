@@ -1,7 +1,7 @@
 import configparser
 import csv
 from pathlib import Path
-import utils
+import linking.utils as utils
 
 from linking.entity_linker import EntityLinker
 
@@ -13,16 +13,22 @@ class NELinker(EntityLinker):
         config.read(config_path)
         nes_in_cxts_path = Path(config['wikiner']['ner_contexts_output'])
         with open(nes_in_cxts_path, 'r') as f:
-            self.dict_data = [{"uri": line[-1].strip(),
-                               "surface_form": line[0].split('::')[0],
-                               "type": line[0].split('::')[-1],
-                               "start_offset": line[1],
-                               "end_offset": line[2],
-                               "context": line[3]
-                               } for line in list(csv.reader(f, delimiter="\t"))]
+            self.dict_data = []
+            for row in f:
+                # @Anna, I have removed the use of the CSV reader as this was not reading all the rows in the
+                # tsv file for some reason... will debug later :)
+
+                line = row.strip().split("\t")
+                d = {"uri": line[-1].strip(),
+                     "surface_form": line[0].split('::')[0],
+                     "type": line[0].split('::')[-1],
+                     "start_offset": line[1],
+                     "end_offset": line[2],
+                     "context": line[3]
+                     }
+                self.dict_data.append(d)
         self.uri_dict = None
         self.surface_dict = None
-
 
     def link_within_context(self,
                             surface_form: str,
@@ -42,14 +48,24 @@ class NELinker(EntityLinker):
         else:
             raise ValueError(f'no contexts for surface form \'{surface_form}\' were not found in the dataset')
 
-
-    def find_broaders(self, uri: str)->list:
+    def find_broaders(self, uri: str) -> list:
+        uri = uri.split("##")[0]
         if self.uri_dict is None:
             self.uri_dict = {}
+            print("initializing")
             for d in self.dict_data:
+                # @Anna, I have modified this and am not using your dict utility functions any more
+                # I am not sure if the functionality is the same as you intended
                 if d['uri'] != '<https://no.entity.found>':
-                    utils.add_or_append(self.uri_dict, key=d['uri'], value=d)
+                    keytouse = d['uri']
+                else:
+                    keytouse = d["surface_form"]
+                l = self.uri_dict.get(keytouse, [])
+                l.append(d["type"])
+                self.uri_dict[keytouse] = l
+            for k, v in self.uri_dict.items():
+                self.uri_dict[k] = list(set(v))
         if uri in self.uri_dict.keys():
-            return list(set(self.uri_dict[uri]['type']))
+            return self.uri_dict[uri]
         else:
             raise ValueError(f'uri \'{uri}\' was not found in the dataset')
