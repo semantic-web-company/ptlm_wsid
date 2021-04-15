@@ -6,6 +6,8 @@ from typing import List, Dict
 import re
 import random as ran
 import os.path as op
+
+import scipy.stats
 from scipy import stats
 import numpy as np
 import json
@@ -24,12 +26,41 @@ config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolat
 config.read(config_paths)
 logger = logging.getLogger()
 
+def kl_vs_random(log_odds_of_induced,
+                 randomized_logodds,
+                 numbins : int = 300):
+    odds_random = [item for sublist in randomized_logodds for item in sublist]
+    kde_random = stats.gaussian_kde(odds_random)
+    try:
+        kde_predicted = stats.gaussian_kde(log_odds_of_induced)
+
+        minpoint = min(odds_random+log_odds_of_induced)
+        maxpoint = max(odds_random+log_odds_of_induced)
+        supportwidth = maxpoint-minpoint
+        minpoint -= 0.5*supportwidth
+        maxpoint += 0.5*supportwidth
+        binwidth = float(maxpoint-minpoint)/float(numbins)
+        bins = [minpoint+i*binwidth for i in range(numbins+1)]
+        pdf_random = kde_random(bins)
+        pdf_predicted = kde_predicted(bins)
+
+        kl = stats.entropy(pk=pdf_random, qk=pdf_predicted)
+        return kl
+    except:
+        return 0
+
 
 def oddsratios_probs_vs_random(log_odds_of_induced,
                                randomized_logodds):
     odds_random = [item for sublist in randomized_logodds for item in sublist]
+    minpoint = min(odds_random+odds_random)
+    maxpoint = max(odds_random+odds_random)
+    supportwidth = maxpoint-minpoint
+    minpoint -= supportwidth
+    maxpoint += supportwidth
+
     kernel = stats.gaussian_kde(odds_random)
-    probs = [1 - kernel.integrate_box_1d(min(odds_random)-1, loid) for loid in log_odds_of_induced]
+    probs = [1 - kernel.integrate_box_1d(minpoint, loid) for loid in log_odds_of_induced]
     #print("\n")
     #print("loginduced", log_odds_of_induced)
     #print("probs: ", probs)

@@ -5,38 +5,40 @@ from os import scandir
 from matplotlib import pylab as P
 
 from linking.wikidata_linker import WikidataLinker
-from linking.dummy_linker import DummyLinker
 from linking.NE_linker import NELinker
 from utils import config, this_dir, collect_entities, logger, get_params_from_dirname, config_paths
 from broader_analysis import link_and_find_broaders, link_and_find_all_broaders, best_broaders
 from utils import create_random_candidates
-from utils import oddsratios_probs_vs_random, oddsratios_from_mean_of_random
+from utils import oddsratios_probs_vs_random, oddsratios_from_mean_of_random, kl_vs_random
 from utils import load_candidates
 from plotting import plot_against_randomized
 import copy
 
-num_random = 100
-linkers = [
-    # DummyLinker(),
-    NELinker(config_path=config_paths[0]),
-    WikidataLinker()
-]
-dev_thrs = 2
+num_random = 200 # Number of random candidates generated for eval purposes.
+dev_thrs = 2  # Candidates more than this number of std from the random-mean are counted as good.
 do_plots = True
-
-margin = 12
 
 induction_result_directory = config['experiment']['new_types_output_folder']
 evaluation_output_directory = config['evaluation']['outputfolder']
+language = config['wikiner']['language']
+
+linkers = [
+    # DummyLinker(),
+    NELinker(config_path=config_paths[0]),
+    WikidataLinker(language=language)
+]
+margin = 12
 
 eval_results = []
 
 m_dirs = [f.path for f in scandir(induction_result_directory) if f.is_dir()]
 cols_for_output = ["k", "m", "th",
                    "linker",
-                   "oddsratios_probs_vs_random_LIB", "above2std_of_oddsrations_vs_random_HIB"]
+                   "oddsratios_probs_vs_random_LIB",
+                   "above2std_of_oddsrations_vs_random_HIB",
+                   "KL_vs_random_HIB"]
 
-with open(op.join(evaluation_output_directory, "results.csv"), "w") as fout:
+with open(op.join(evaluation_output_directory, language+"_results.csv"), "w") as fout:
     fout.write("\t".join(cols_for_output) + "\n")
     for mdir in m_dirs:
         experiment_dirs = [f.path for f in scandir(mdir) if f.is_dir()]
@@ -76,7 +78,6 @@ with open(op.join(evaluation_output_directory, "results.csv"), "w") as fout:
                 if len(randomized_logodds) > num_random:
                     randomized_logodds = randomized_logodds[:num_random]
 
-
                 # Quantitative evaluations ---------------------------------
 
                 quant1 = oddsratios_probs_vs_random(log_odds_of_induced,
@@ -85,14 +86,15 @@ with open(op.join(evaluation_output_directory, "results.csv"), "w") as fout:
                 quant2 = oddsratios_from_mean_of_random(log_odds_of_induced,
                                                         randomized_logodds,
                                                         dev_thrs=dev_thrs)
+                quant3 = kl_vs_random(log_odds_of_induced, randomized_logodds)
 
                 if do_plots:
                     paramkeys = list(param_dict.keys())
                     paramkeys.sort()
-                    paramstr = "_".join([k+str(param_dict[k]) for k in paramkeys])
+                    paramstr = "_".join([k + str(param_dict[k]) for k in paramkeys])
                     figsuf = "_" + str(paramstr) + "_" + str(linker.__class__.__name__)
                     figfilename = op.join(evaluation_output_directory, "LOGODDS_" + figsuf + ".png")
-                    fig_extratext="pval: "+("%.4f" % quant1)+"  outl: "+str(quant2)
+                    fig_extratext = "pval: " + ("%.4f" % quant1) + "  outl: " + str(quant2) + " kl:" + ("%.4f" % quant3)
                     plot_against_randomized(log_odds_of_induced,
                                             randomized_logodds,
                                             figsufix=figsuf, extratext=fig_extratext)
@@ -102,13 +104,14 @@ with open(op.join(evaluation_output_directory, "results.csv"), "w") as fout:
                 this_res.update(param_dict)
                 this_res["linker"] = linker.__class__.__name__
                 this_res["oddsratios_probs_vs_random_LIB"] = quant1
-                this_res["std_of_oddsrations_vs_random_HIB"] = quant2
+                this_res["above2std_of_oddsrations_vs_random_HIB"] = quant2
+                this_res["KL_vs_random_HIB"] = quant3
                 this_res["number_of_candidates"] = len(induced_candidates)
 
                 eval_results.append(this_res)
                 print(json.dumps(this_res, indent=2))
                 fout.write("\t".join([str(this_res[x])
-                                      for x in cols_for_output])+"\n")
+                                      for x in cols_for_output]) + "\n")
         fout.flush()
 
         try:
