@@ -26,21 +26,22 @@ config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolat
 config.read(config_paths)
 logger = logging.getLogger()
 
+
 def kl_vs_random(log_odds_of_induced,
                  randomized_logodds,
-                 numbins : int = 300):
+                 numbins: int = 300):
     odds_random = [item for sublist in randomized_logodds for item in sublist]
     kde_random = stats.gaussian_kde(odds_random)
     try:
         kde_predicted = stats.gaussian_kde(log_odds_of_induced)
 
-        minpoint = min(odds_random+log_odds_of_induced)
-        maxpoint = max(odds_random+log_odds_of_induced)
-        supportwidth = maxpoint-minpoint
-        minpoint -= 0.5*supportwidth
-        maxpoint += 0.5*supportwidth
-        binwidth = float(maxpoint-minpoint)/float(numbins)
-        bins = [minpoint+i*binwidth for i in range(numbins+1)]
+        minpoint = min(odds_random + log_odds_of_induced)
+        maxpoint = max(odds_random + log_odds_of_induced)
+        supportwidth = maxpoint - minpoint
+        minpoint -= 0.5 * supportwidth
+        maxpoint += 0.5 * supportwidth
+        binwidth = float(maxpoint - minpoint) / float(numbins)
+        bins = [minpoint + i * binwidth for i in range(numbins + 1)]
         pdf_random = kde_random(bins)
         pdf_predicted = kde_predicted(bins)
 
@@ -53,19 +54,19 @@ def kl_vs_random(log_odds_of_induced,
 def oddsratios_probs_vs_random(log_odds_of_induced,
                                randomized_logodds):
     odds_random = [item for sublist in randomized_logodds for item in sublist]
-    minpoint = min(odds_random+odds_random)
-    maxpoint = max(odds_random+odds_random)
-    supportwidth = maxpoint-minpoint
+    minpoint = min(odds_random + odds_random)
+    maxpoint = max(odds_random + odds_random)
+    supportwidth = maxpoint - minpoint
     minpoint -= supportwidth
     maxpoint += supportwidth
 
     kernel = stats.gaussian_kde(odds_random)
     probs = [1 - kernel.integrate_box_1d(minpoint, loid) for loid in log_odds_of_induced]
-    #print("\n")
-    #print("loginduced", log_odds_of_induced)
-    #print("probs: ", probs)
+    # print("\n")
+    # print("loginduced", log_odds_of_induced)
+    # print("probs: ", probs)
     pprod = functools.reduce(lambda x, y: x * y, probs)
-    #print("\t>", np.mean(probs), pprod, max(probs), sep="\t")
+    # print("\t>", np.mean(probs), pprod, max(probs), sep="\t")
     return np.mean(probs)
 
 
@@ -76,7 +77,7 @@ def oddsratios_from_mean_of_random(log_odds_of_induced,
     meanrandom = np.mean(odds_random)
     stdrandom = np.std(odds_random)
     return len([x for x in log_odds_of_induced
-            if (x-meanrandom) > dev_thrs*stdrandom])
+                if (x - meanrandom) > dev_thrs * stdrandom])
 
 
 def load_candidates(file_path: str,
@@ -132,7 +133,7 @@ def create_random_candidates(induced_candidates: List[Dict],
     for nr in range(num_random):
         totfails = 12
         finished = False
-        while not finished and totfails>0:
+        while not finished and totfails > 0:
             all_entities = all_entities_constant.copy()
             this_replicate = []
             finished = True

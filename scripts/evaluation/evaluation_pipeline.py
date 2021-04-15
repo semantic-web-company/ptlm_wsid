@@ -14,7 +14,7 @@ from utils import load_candidates
 from plotting import plot_against_randomized
 import copy
 
-num_random = 200 # Number of random candidates generated for eval purposes.
+num_random = 100 # Number of random candidates generated for eval purposes.
 dev_thrs = 2  # Candidates more than this number of std from the random-mean are counted as good.
 do_plots = True
 
@@ -36,7 +36,8 @@ cols_for_output = ["k", "m", "th",
                    "linker",
                    "oddsratios_probs_vs_random_LIB",
                    "above2std_of_oddsrations_vs_random_HIB",
-                   "KL_vs_random_HIB"]
+                   "KL_vs_random_HIB",
+                   "number_of_candidates"]
 
 with open(op.join(evaluation_output_directory, language+"_results.csv"), "w") as fout:
     fout.write("\t".join(cols_for_output) + "\n")
