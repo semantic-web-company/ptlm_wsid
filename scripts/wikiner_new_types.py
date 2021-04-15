@@ -60,12 +60,7 @@ if __name__ == '__main__':
     logger.info(f'Config: {config.items("wikiner")}')
     # config into vars
     ners_predictions_path = Path(config['wikiner']['ners_predictions_path'])
-    # nes_in_cxts_path = Path(config['wikiner']['ner_contexts_output'])
     language = config['wikiner']['language']
-    # t_limit = int(config['wikiner']['tokens_to_be_processed'])
-    # conll_data_path = config['wikiner']['conll_data_path']
-    # m = int(config['wikiner']['m'])
-    # k = int(config['wikiner']['k'])
     new_types_output_folder = Path(config['wikiner']['new_types_output_folder'])
     ks = [int(k.strip()) for k in config['wikiner']['ks'].split(',')]
     ths_n_descriptors = [int(x.strip()) for x in config['wikiner']['ths_type_descriptors'].split(',')]

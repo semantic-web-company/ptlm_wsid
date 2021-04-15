@@ -172,7 +172,7 @@ def induce(contexts: List[str],
                      f'fca_cluster produced {len(senses)} senses.')
     if not senses:  # fca_cluster did not produce results
         all_predicted = sum(predicted.values(), [])
-        top_predicted = [x[0] for x in Counter(all_predicted).most_common(top_n_pred)]
+        top_predicted = [x[0] for x in Counter(all_predicted).most_common(min([top_n_pred, n_sense_descriptors]))]
         senses = [fca.Concept(intent=top_predicted,
                               extent=list(predicted.keys()))]
         logger.debug(f'For {target_phrase_in_fiurst_cintext} with {len(contexts)} contexts '
