@@ -191,3 +191,24 @@ def collect_entities(candidates: List[Dict]):
         allentities = allentities | set(candidate["entities"])
 
     return allentities
+
+
+def build_uri2surfaceform(sourcefile: str):
+    uri2surfaceform = dict()
+    with open(sourcefile) as fin:
+        for ln,line in enumerate(fin):
+            if ln==0:
+                continue
+            lines=line.strip().split("\t")
+            ent = lines[0]
+            context = lines[3]
+            start_off = int(lines[1])
+            end_off = int(lines[2])
+            uri = str(lines[-1])
+            l = uri2surfaceform.get(uri, [])
+            if uri == "<https://no.entity.found>":
+                continue
+            else:
+                l.append(ent.lower().strip())
+            uri2surfaceform[uri] = l
+    return uri2surfaceform

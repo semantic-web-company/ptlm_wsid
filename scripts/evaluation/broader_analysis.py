@@ -47,6 +47,20 @@ def link_and_find_all_broaders(entities: Set[str],
 
     return result
 
+def add_labels_to_supers(per_candidate_links_and_supersList: List[Dict],
+                         linker: EntityLinker):
+    all_labels = []
+    for can in per_candidate_links_and_supersList:
+        bestsuper = can["best_match_broader"]
+        bestsuper_label = ""
+        if bestsuper is not None:
+            bestsuper_label = linker.find_label(bestsuper)
+        can["best_match_broader_label"] = bestsuper_label
+        all_labels.append(bestsuper_label)
+    return all_labels
+
+
+
 
 def best_broaders(supers_for_all_entities: Dict,
                   per_candidate_links_and_supers: List[Dict],
@@ -101,13 +115,17 @@ def best_broaders(supers_for_all_entities: Dict,
         maxbroads = min(len(logslist), num_best)
         logodds = []
         for bi in range(maxbroads):
-            logodds.append({"brandomized_candidatesroader": logslist[bi][0],
+            logodds.append({"candidatesbroader": logslist[bi][0],
                             "loggods": logslist[bi][1]})
         can["log_odds"] = logodds
         if doprint:
             print("\t\t---",", ".join([str(x[1]) for x in logslist[:maxbroads]]))
         if len(logslist)>0:
             onlytopmost.append(logslist[0][1])
+            can["best_match_broader"] = logslist[0][0]
+        else:
+            onlytopmost.append(None)
+            can["best_match_broader"] = None
 
     return onlytopmost
 

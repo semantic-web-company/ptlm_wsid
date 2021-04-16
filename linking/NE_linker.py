@@ -30,6 +30,9 @@ class NELinker(EntityLinker):
         self.uri_dict = None
         self.surface_dict = None
 
+    def find_label(self, uri:str) -> str:
+        return uri
+
     def link_within_context(self,
                             surface_form: str,
                             start_offset: int,

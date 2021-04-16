@@ -1,26 +1,30 @@
 import json
 import os.path as op
 from os import scandir
+import copy
 
 from matplotlib import pylab as P
+import numpy as np
 
 from linking.wikidata_linker import WikidataLinker
 from linking.NE_linker import NELinker
 from utils import config, this_dir, collect_entities, logger, get_params_from_dirname, config_paths
-from broader_analysis import link_and_find_broaders, link_and_find_all_broaders, best_broaders
+from broader_analysis import link_and_find_broaders, link_and_find_all_broaders, best_broaders, add_labels_to_supers
 from utils import create_random_candidates
 from utils import oddsratios_probs_vs_random, oddsratios_from_mean_of_random, kl_vs_random
 from utils import load_candidates
+from utils import build_uri2surfaceform
 from plotting import plot_against_randomized
-import copy
 
-num_random = 100 # Number of random candidates generated for eval purposes.
+num_random = 100  # Number of random candidates generated for eval purposes.
 dev_thrs = 2  # Candidates more than this number of std from the random-mean are counted as good.
 do_plots = True
+min_sizes = {"en": 10, "de": 20}
 
 induction_result_directory = config['experiment']['new_types_output_folder']
 evaluation_output_directory = config['evaluation']['outputfolder']
 language = config['wikiner']['language']
+linkedtsvfile = config['wikiner']['ner_contexts_output']
 
 linkers = [
     # DummyLinker(),
@@ -30,6 +34,7 @@ linkers = [
 margin = 12
 
 eval_results = []
+uri2surfaceform = build_uri2surfaceform(linkedtsvfile)
 
 m_dirs = [f.path for f in scandir(induction_result_directory) if f.is_dir()]
 cols_for_output = ["k", "m", "th",
@@ -37,9 +42,13 @@ cols_for_output = ["k", "m", "th",
                    "oddsratios_probs_vs_random_LIB",
                    "above2std_of_oddsrations_vs_random_HIB",
                    "KL_vs_random_HIB",
-                   "number_of_candidates"]
+                   "number_of_candidates",
+                   "average_candidate_size",
+                   "maximum_candidate_size",
+                   "minumum_candidate_size"]
 
-with open(op.join(evaluation_output_directory, language+"_results.csv"), "w") as fout:
+outfn = language + "_" + str(min_sizes[language]) + "_results.csv"
+with open(op.join(evaluation_output_directory, outfn), "w") as fout:
     fout.write("\t".join(cols_for_output) + "\n")
     for mdir in m_dirs:
         experiment_dirs = [f.path for f in scandir(mdir) if f.is_dir()]
@@ -50,10 +59,17 @@ with open(op.join(evaluation_output_directory, language+"_results.csv"), "w") as
             if len(induced_candidates_) == 0:
                 logger.error(str(param_dict) + " has an empyt directory: " + str(exp_dir))
                 break
+            induced_candidates_ = [can for can in induced_candidates_
+                                   if (len(can["entities"])) >= min_sizes[language]]
+            if len(induced_candidates_) < 2:
+                logger.error("\n\nToo few candidates left for  " + str(param_dict))
+                continue
             all_entities = collect_entities(induced_candidates_)
             # Generating randoms
             randomized_candidates_ = create_random_candidates(induced_candidates_,
                                                               num_random + margin)
+            for can in induced_candidates_:
+                can["entity_labels"] = [uri2surfaceform.get(x, [x])[0] for x in can["entities"]]
             for linker in linkers:
                 # Linking results
                 induced_candidates = copy.deepcopy(induced_candidates_)
@@ -63,6 +79,8 @@ with open(op.join(evaluation_output_directory, language+"_results.csv"), "w") as
 
                 log_odds_of_induced = best_broaders(broaders_for_all_entities,
                                                     per_candidate_broader_counts)
+                best_labels = add_labels_to_supers(per_candidate_broader_counts,
+                                                   linker)
                 # print(log_odds_of_induced,"\n--")
 
                 # Generate random equivalents and find their broaders ------
@@ -100,19 +118,25 @@ with open(op.join(evaluation_output_directory, language+"_results.csv"), "w") as
                                             randomized_logodds,
                                             figsufix=figsuf, extratext=fig_extratext)
                     P.savefig(figfilename)
+                    P.close()
 
+                can_sizes = [len(x['entities']) for x in induced_candidates_]
                 this_res = dict()
                 this_res.update(param_dict)
                 this_res["linker"] = linker.__class__.__name__
                 this_res["oddsratios_probs_vs_random_LIB"] = quant1
                 this_res["above2std_of_oddsrations_vs_random_HIB"] = quant2
                 this_res["KL_vs_random_HIB"] = quant3
-                this_res["number_of_candidates"] = len(induced_candidates)
+                this_res["number_of_candidates"] = len(induced_candidates_)
+                this_res["average_candidate_size"] = np.mean(can_sizes)
+                this_res["maximum_candidate_size"] = max(can_sizes)
+                this_res["minumum_candidate_size"] = min(can_sizes)
 
                 eval_results.append(this_res)
-                print(json.dumps(this_res, indent=2))
+                # print(json.dumps(this_res, indent=2))
                 fout.write("\t".join([str(this_res[x])
                                       for x in cols_for_output]) + "\n")
+            print("Done: ", str(param_dict))
         fout.flush()
 
         try:
