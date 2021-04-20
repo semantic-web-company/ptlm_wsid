@@ -31,6 +31,7 @@ def kl_vs_random(log_odds_of_induced,
                  randomized_logodds,
                  numbins: int = 300):
     odds_random = [item for sublist in randomized_logodds for item in sublist]
+    odds_random = [o for o in odds_random if o is not None]
     kde_random = stats.gaussian_kde(odds_random)
     try:
         kde_predicted = stats.gaussian_kde(log_odds_of_induced)
@@ -51,11 +52,13 @@ def kl_vs_random(log_odds_of_induced,
         return 0
 
 
-def oddsratios_probs_vs_random(log_odds_of_induced,
+def oddsratios_probs_vs_random(log_odds_of_induced_,
                                randomized_logodds):
     odds_random = [item for sublist in randomized_logodds for item in sublist]
-    minpoint = min(odds_random + odds_random)
-    maxpoint = max(odds_random + odds_random)
+    odds_random = [o for o in odds_random if o is not None]
+    log_odds_of_induced = [o for o in log_odds_of_induced_ if o is not None]
+    minpoint = min(odds_random + log_odds_of_induced)
+    maxpoint = max(odds_random + log_odds_of_induced)
     supportwidth = maxpoint - minpoint
     minpoint -= supportwidth
     maxpoint += supportwidth
@@ -70,10 +73,17 @@ def oddsratios_probs_vs_random(log_odds_of_induced,
     return np.mean(probs)
 
 
-def oddsratios_from_mean_of_random(log_odds_of_induced,
+def oddsratios_from_mean_of_random(log_odds_of_induced_,
                                    randomized_logodds,
                                    dev_thrs=2):
+    log_odds_of_induced = [x for x in log_odds_of_induced_ if x is not None]
+    if len(log_odds_of_induced) == 0:
+        return 0
+
     odds_random = [item for sublist in randomized_logodds for item in sublist]
+    odds_random = [x for x in odds_random if x is not None]
+    if len(odds_random)==0:
+        return(len(log_odds_of_induced))
     meanrandom = np.mean(odds_random)
     stdrandom = np.std(odds_random)
     return len([x for x in log_odds_of_induced
