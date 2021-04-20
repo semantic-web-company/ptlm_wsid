@@ -18,7 +18,15 @@ evaluation_output_directory = config['evaluation']['outputfolder']
 induction_result_directory = config['experiment']['new_types_output_folder']
 language = config['wikiner']['language']
 
-col_crit = [12]#[11,13]  # Which are the quantitative eval columns
+# Which are the quantitative eval columns
+## FIRST FIGURE:
+col_crit = [11,13]
+
+## SECOND FIGURE:
+col_crit = [12]
+
+
+
 #   11 propr sig enrich
 #   12 propr small
 #   13 max pval
@@ -32,6 +40,9 @@ multicritcols = [4, 5, 6]  # These criteria (quants) will be  plotted for each m
 
 figsizex = 388 / 96.9
 figsizey = 818 / 96
+if len(col_crit)==1:
+    figsizey = 600 / 96
+    figsizex = 600 / 96.9
 outname = "pvals_"+language+".png" if len(col_crit)>1 else "sizes_"+language+".png"
 
 paramvals = {}
@@ -164,16 +175,24 @@ with open(evaluation_csv_file) as fin:
 
                 if len(col_crit)>1:
                     sf = subfigs[modnum,crinum]
+                    sfsubplots = sf.subplots(2, 2, sharex=True, sharey=True)
                 else:
                     sf = subfigs[modnum]
-                sfsubplots = sf.subplots(2,2, sharex=True, sharey=True)
+                    sfsubplots = sf.subplots(1, 4, sharex=True, sharey=True)
+
 
                 subplotn = 0
                 for supergridval in paramvals[htrans[supergrid_col]]:  # subplot  th
                     subplotn += 1
-                    subplotrow = 0 if subplotn in [1,2] else 1
-                    subplitcol = 0 if subplotn in [1,3] else 1
-                    ax = sfsubplots[subplotrow, subplitcol]
+                    if len(col_crit)>1:
+                        subplotrow = 0 if subplotn in [1,2] else 1
+                        subplitcol = 0 if subplotn in [1,3] else 1
+                        ax = sfsubplots[subplotrow, subplitcol]
+                    else:
+                        ax = sfsubplots[subplotn-1]
+                        subplotrow = 0
+                        subplitcol = subplotn-1
+
                     mtitle = mod if cri in muliplotcrit else ""
                     gridtitle = mtitle + "  " + htrans[supergrid_col] + "=" + str(supergridval)
 
@@ -187,25 +206,32 @@ with open(evaluation_csv_file) as fin:
 
                     if subplotrow==0:
                         ax.set_xlabel("")
-                    if subplitcol==1:
+                    if subplitcol>0:
                         ax.set_ylabel("")
 
-                if crinum==0:
+                if len(col_crit) == 1:
+                    wsp=0.12
+                    cbarpos = 0.25
+
+                else:
+                    wsp=0.0
+                    cbarpos= 0.05
+                if crinum==0 and len(col_crit) > 1:
                     textypos = 0.25 if modnum == 0 else 0.35
                     sf.text(x=0.01, y = textypos, s=mod_translator[mod],
                             fontsize="x-large", rotation="vertical")
                 if modnum==0:
                     sf.suptitle(crit_translator.get(cri, cri), fontsize="x-large")
-                    sf.subplots_adjust(left=0.138, right=1, bottom=0.12, top=0.87, wspace=0.0, hspace=0.05)
+                    sf.subplots_adjust(left=0.138, right=1, bottom=0.12, top=0.87, wspace=wsp, hspace=0.05)
                     #fig.subplots_adjust(left=0, right=0.911, bottom=0.11, top=0.99, wspace=0.0, hspace=0.11)
                 if modnum==1 or len(col_crit)==1:
                     if len(col_crit)==1:
-                        toplim = top=0.87
+                        toplim = 1
                     else:
                         toplim = 1
                     #fig.subplots_adjust(left=0, right=0.911, bottom=0.31, top=0.99, wspace=0.0, hspace=0.11)
-                    sf.subplots_adjust(left=0.138, right=1, bottom=0.22, top=toplim, wspace=0.0, hspace=0.05)
-                    cbarax = sf.add_axes([0.2, 0.05, 0.7, 0.057])
+                    sf.subplots_adjust(left=0.138, right=1, bottom=0.22, top=toplim, wspace=wsp, hspace=0.05)
+                    cbarax = sf.add_axes([0.2, cbarpos, 0.7, 0.057])
                     #[left, bottom, width, height]
                     sf.colorbar(pc, cax=cbarax,  orientation="horizontal")
 
