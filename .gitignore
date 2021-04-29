@@ -6,6 +6,7 @@
 .idea
 *wandb
 /scripts/run
+data/
 
 # User-specific stuff
 .idea/**/workspace.xml
@@ -217,3 +218,4 @@ dmypy.json
 /ptlm_wsid/*.tsv
 /ptlm_wsid/run
 !/scripts
+/type_verification

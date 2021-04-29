@@ -1,45 +1,13 @@
 """
-A module for Class Hierarchy Induction = CHI
+A module for inducing senses of target phrases from a set of contexts
 """
-from collections import defaultdict, Counter
-from typing import Iterator, Tuple, Dict, List, TextIO, Iterable
-from io import StringIO
+from typing import Iterator, Tuple, Dict, List, Iterable
 
-from conllu import parse, TokenList
 from tqdm import tqdm
 
-import fca
 import ptlm_wsid.generative_factors as gf
-import ptlm_wsid.utils as ptlm_utils
 
 O_tags = {'"', 'NE', 'O'}
-
-
-# def parse_conll(f: TextIO, fields=('form', 'tag'),
-#                 n_tokens: int = -1) -> Iterator[TokenList]:
-#     data = parse_incr(
-#         f, fields=fields,
-#         field_parsers={'tag': lambda line, i: line[i].split('-')})
-#     i = 0
-#     for sent in data:
-#         for w in sent:
-#             i += 1
-#             if 0 < n_tokens < i:
-#                 return
-#             yield w['form'], w['tag']
-
-
-def parse_conll(data_str: str, fields=('form', '1', '2', 'tag'),
-                n_tokens: int = -1) -> Iterator[TokenList]:
-    data = parse(data_str, fields=fields,
-                 field_parsers={'tag': lambda line, i: line[i].split('-')})
-    i = 0
-    for sent in data:
-        for w in sent:
-            i += 1
-            if 0 < n_tokens < i:
-                return
-            yield w['form'], w['tag']
 
 
 def collect_ners(forms, tags, tokens_window=35):
@@ -72,7 +40,7 @@ def collect_ners(forms, tags, tokens_window=35):
                 cxt_start_ind = i - tokens_window - len(ner_form)
                 cxt_start_ind = cxt_start_ind if cxt_start_ind > 0 else 0
                 cxt_before = ' '.join(forms[cxt_start_ind:(i - len(ner_form))])
-                start_ind = len(cxt_before) + 1  #
+                start_ind = len(cxt_before) + 1  # compensate for additional space after cxt_before
                 end_ind = start_ind + len(ner_str)
                 ner_form = []
                 cxt_after = ' '.join(forms[i:i+tokens_window])
@@ -88,7 +56,16 @@ def iter_senses(ner_agg: Dict[str, Iterable[int]],
                 contexts: List[str],
                 start_ends: List[Tuple[int, int]],
                 lang='deu', cxts_limit=50, n_pred=50, target_pos='N',
-                n_sense_descriptors=10, th_att_len=4):
+                n_sense_descriptors=10, th_att_len=4,
+                logger=None):
+    """
+    :param th_att_len: min length of produced substitute
+    :param n_pred: how many predictions are produced for each context
+    :param n_sense_descriptors: how many sense indicators - subset of all
+        predictions - are output for each sense
+    :param target_pos: the desired part of speach of predictions
+    :param lang: language. Used for POS tagging and lemmatization of predictions.
+    """
     pbar = tqdm(list(ner_agg.items()))
     total_examples = 0
     for ner_form, ner_inds in pbar:
@@ -99,26 +76,8 @@ def iter_senses(ner_agg: Dict[str, Iterable[int]],
                                target_pos=target_pos, lang=lang, verbose=False,
                                n_sense_descriptors=n_sense_descriptors,
                                top_n_pred=n_pred, min_sub_len=th_att_len,
-                               min_number_contexts_for_fca_clustering=5)
+                               min_number_contexts_for_fca_clustering=5,
+                               logger=logger)
         total_examples += len(ner_cxts[:cxts_limit])
         pbar.set_description(desc=f'{total_examples} contexts processed')
         yield ner_form, [x.intent for x in ner_senses]
-
-
-# def get_senses_per_ne(ner_agg: Dict[str, Iterable[int]],
-#                       contexts: List[str],
-#                       start_ends: List[Tuple[int, int]],
-#                       lang='deu', cxts_limit=50, n_pred=50, target_pos='N',
-#                       th_att_len=4) -> Dict[str, Iterable[str]]:
-#     ners_dict = dict()
-#     senses_iterator = iter_senses(ner_agg, contexts, start_ends,
-#                                   lang=lang, cxts_limit=cxts_limit,
-#                                   n_pred=n_pred, target_pos=target_pos,
-#                                   th_att_len=th_att_len)
-#     for ner_form, ner_senses in senses_iterator:
-#         if len(ner_senses) > 1:
-#             for i, sense in enumerate(ner_senses):
-#                 ners_dict[f'{ner_form}##{i}'] = list(sense)
-#         else:
-#             ners_dict[f'{ner_form}'] = list(ner_senses[0])
-#     return ners_dict
