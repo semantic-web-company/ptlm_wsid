@@ -235,6 +235,8 @@ with open(evaluation_csv_file) as fin:
                     #[left, bottom, width, height]
                     sf.colorbar(pc, cax=cbarax,  orientation="horizontal")
 
+
+
                     #P.set_cmap(cm)
                     #P.colorbar()
 

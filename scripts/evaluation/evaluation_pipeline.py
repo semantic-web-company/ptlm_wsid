@@ -57,9 +57,13 @@ cols_for_output = ["k", "m", "th",
                    ]
 
 bcach = binocache()
-wholecsvfilename = "WHOLE"+language + "_" + str(min_sizes[language]) + "_results.csv"
+wholecsvfilename = "WHOLE" + language + "_" + str(min_sizes[language]) + "_results.csv"
 outfn = language + "_" + str(min_sizes[language]) + "_results.csv"
-#wholeout = open(wholecsvfilename, "w")
+
+wholeout = open(wholecsvfilename, "w")
+linew = "\t".join(["m", "k","th", "suprise", "loggods", "candidatebroaderlabel"])
+wholeout.write(linew+"\n")
+
 with open(op.join(evaluation_output_directory, outfn), "w") as fout:
     fout.write("\t".join(cols_for_output) + "\n")
     for mdir in m_dirs:
@@ -72,9 +76,9 @@ with open(op.join(evaluation_output_directory, outfn), "w") as fout:
             if len(induced_candidates_) == 0:
                 logger.error(str(param_dict) + " has an empyt directory: " + str(exp_dir))
                 break
-            
+
             induced_candidates_ = [can for can in induced_candidates_
-                                   if len(can["entities"])  >= min_sizes[language]]
+                                   if len(can["entities"]) >= min_sizes[language]]
             if len(induced_candidates_) < 2:
                 logger.error("\n\nToo few candidates left for  " + str(param_dict))
                 continue
@@ -136,7 +140,7 @@ with open(op.join(evaluation_output_directory, outfn), "w") as fout:
                 # Number of candidates which are significantly over represented in a candidate broader
                 quant4 = len([x for i, x in enumerate(pavals_for_induced)
                               if x is not None
-                              and x < (pvalthrs / (  len(per_candidate_broader_counts[i]["broader_counts"]) )
+                              and x < (pvalthrs / (len(per_candidate_broader_counts[i]["broader_counts"]))
                                        )]) / numcans
 
                 # Proportion of candidates that best-match categories which are less than average size
@@ -146,7 +150,7 @@ with open(op.join(evaluation_output_directory, outfn), "w") as fout:
                               and p["log_odds"][0]["suprise"] < 1.0]) / numcans
 
                 # Maximum p-value
-                quant6 = np.max([x if x is not None else pvalthrs*2
+                quant6 = np.max([x if x is not None else pvalthrs * 2
                                  for x in pavals_for_induced])
 
                 print("\t", quant4, quant5)
@@ -199,19 +203,31 @@ with open(op.join(evaluation_output_directory, outfn), "w") as fout:
                 outputjson = {"candidate_types": per_candidate_broader_counts,
                               "evaluation_results": this_res,
                               "evaluation_parameters": eval_params}
-                if min_sizes[language]>0:
+                if min_sizes[language] > 0:
                     with open(op.join(jsondir, jsonname), "w") as jfout:
                         json.dump(outputjson, jfout, indent=2)
                         jfout.close()
-                else:
-                    pass
 
+                for p in per_candidate_broader_counts:
+                    if "log_odds" not in p.keys() or len(p["log_odds"]) == 0:
+                        continue
+                    candsbs = list(p["log_odds"])
+                    candsbs.sort(key=lambda x: x["suprise"])
+                    bestcan = candsbs[0]
+                    linew = "\t".join([str(param_dict["m"]),      # 1
+                                       str(param_dict["k"]),      # 2
+                                       str(param_dict["th"]),     #3
+                                       str(bestcan["suprise"]),   # 4
+                                       str(bestcan["loggods"]),   # 5
+                                       str(bestcan["candidatebroaderlabel"])])
+                    wholeout.write(linew + "\n")
 
             # print("Done: ", str(param_dict))
 
         fout.flush()
-
         try:
             linker._write_cache()
         except:
             pass
+
+wholeout.close()
