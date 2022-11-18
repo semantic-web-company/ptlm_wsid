@@ -26,6 +26,9 @@ class EntityLinker(ABC):
     def find_broaders(self, uri: str) -> list:
         pass
 
+    def find_label(self, uri:str) -> str:
+        pass
+
     def doc(self):
         """
         Should print and return a string explaining additional steps necessary to
