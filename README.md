@@ -1,4 +1,4 @@
-# Pretrained Language Model for WSID
+# Pretrained Language Model for WSID and Ontology Learning
 
 The package implements a WSID method based on clustering predictions from a pre-trained language model.
 In the current implementation the pre-trained multilingual

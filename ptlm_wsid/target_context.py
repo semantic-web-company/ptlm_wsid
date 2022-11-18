@@ -21,6 +21,7 @@ model_tok = None
 model_mlm = None
 model = None
 model_cls = None
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class AvailableModels(Enum):
@@ -54,6 +55,10 @@ def load_model():
         else:
             raise ValueError(f'{model_name_or_path} is not supported yet. try one of '
                              f'{", ".join(list(AvailableModels.__members__.keys()))}')
+        model.to(device)
+        model_mlm.to(device)
+        # model_tok.to(device)
+        model_cls.to(device)
 
 
 class LazySpacyDict(dict):
@@ -117,7 +122,7 @@ class TargetContext:
             # if not do_mask and target_indices[1] - target_indices[0] > 1:
             #     tokenized[target_indices[0]+1:target_indices[1]] = []
             # assert all(token in model_tok.vocab for token in tokenized)
-            tks_tensor = torch.tensor(model_tok.encode(tokenized)).unsqueeze(0)
+            tks_tensor = torch.tensor(model_tok.encode(tokenized)).unsqueeze(0).to(device)
 
             cxt_embedding = model(tks_tensor)[0].squeeze()
             target_embeddings = cxt_embedding[target_indices[0]+1:target_indices[1]+1,:]
@@ -265,7 +270,7 @@ class TargetContext:
             tokens = self.tokenize(do_mask=False)
             target_start, target_end = self.target_indices(do_mask=False)
             cxt_ids = model_tok.encode(tokens)
-            cxt_ids = torch.tensor(cxt_ids).unsqueeze(0)
+            cxt_ids = torch.tensor(cxt_ids).unsqueeze(0).to(device)
             cxt_embedding = get_contextualized_embedding(cxt_ids)
             target_embeddings = cxt_embedding[target_start+1:target_end+1, :]
             target_embedding = torch.mean(target_embeddings, dim=0).squeeze()
@@ -276,7 +281,7 @@ class TargetContext:
                     sc_tokens = model_tok.tokenize(sc_str)
                     sc_inds = [ind+1 for ind in range(len(sc_tokens))
                                if sc_tokens[ind] != ',']
-                    sc_ids = torch.tensor(model_tok.encode(sc_str)).unsqueeze(0)
+                    sc_ids = torch.tensor(model_tok.encode(sc_str)).unsqueeze(0).to(device)
                     assert len(sc_ids[0]) == len(sc_tokens) + 2, (len(sc_ids[0]), len(sc_tokens))
                     sc_embeddings = get_contextualized_embedding(sc_ids)
                     sc_embedding = torch.mean(sc_embeddings[sc_inds, :], dim=0)
@@ -287,7 +292,7 @@ class TargetContext:
                     hypers_scores.append(0)
             for def_ in definitions:
                 if def_.strip():
-                    def_ids = torch.tensor(model_tok.encode(def_)).unsqueeze(0)
+                    def_ids = torch.tensor(model_tok.encode(def_)).unsqueeze(0).to(device)
                     def_embeddings = get_contextualized_embedding(def_ids)
                     def_embedding = torch.mean(def_embeddings[1:-1, :], dim=0)
                     def_score = cosine(def_embedding, target_embedding).item()

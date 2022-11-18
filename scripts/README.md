@@ -13,6 +13,10 @@ Configuration files used by some scripts are located in [configs](./configs).
 - `wikiner_*_config.conf` -- configurations to run WikiNer experiments. Description of the variables are provided in the file itself.
 - [logging.conf](./configs/logging.conf) -- configuration of logging.
 
+## Run as Docker
+
+You can use the `Dockerfile` and run the scripts in the docker container. For this `cd` to the root folder where the `Dockerfile` is located and run `docker run -it`. By default it will execute `chi_example.py` script, change the last line in the `Dockerfile` toi run a different script. 
+
 ## WikiNer experiment
 
 #### to run without linker
@@ -22,12 +26,12 @@ Example for English `en`. For German change `en` to `de`.
 0. Prepare a virtual environment, install all requirements with `pip3 install -r requirements`.
 1. Get WikiNer corpus. Check [the original paper](https://www.sciencedirect.com/science/article/pii/S0004370212000276).
 2. Induce senses of Namned Entities annotated in the WikiNer corpus:     
-   2. In [wikiner_en_senses_config.conf]('./configs/wikiner_en_senses_config.conf') set `linker=dummy`, set `conll_data_path` to point to the actual WikiNer corpus in .tsv format.
-   3. Run
+   1. In [wikiner_en_senses_config.conf]('./configs/wikiner_en_senses_config.conf') set `linker=dummy`, set `conll_data_path` to point to the actual WikiNer corpus in .tsv format.
+   2. Run
       ```bash
       python3 wikiner_senses configs/wikiner_en_senses_config.conf
       ```
-   4. Check the induced sense in `<nes_senses_output_stem>_m<m_value>_k<k_value>.json`, where `*_value` is the respective integer value.  
+   3. Check the induced sense in `<nes_senses_output_stem>_m<m_value>_k<k_value>.json`, where `*_value` is the respective integer value.  
 3. Induce new types from those senses:
    1. In [wikiner_en_types_config.conf]('./configs/wikiner_en_types_config.conf') set `ners_predictions_path` to the output target file with induced senses that you want to use.
    2. Run 
