@@ -23,4 +23,5 @@ ENV PYTHONPATH "${PYTHONPATH}:${SRC_DIR}"
 ENV SRC_DIR=$SRC_DIR
 WORKDIR $SRC_DIR
 
-ENTRYPOINT python $SRC_DIR/scripts/chi_example.py
+ENTRYPOINT python $SRC_DIR/scripts/wsid_example.py
+#ENTRYPOINT python $SRC_DIR/scripts/chi_example.py

@@ -178,7 +178,7 @@ class TargetContext:
 
         :param th_len: min length of substitute in chars
         :param top_n: number of top predictions in the output
-        :param lang: language iso 3 letter code
+        :param lang: language iso 3-letter code
         :param target_pos: the desired POS tag of the prediction. 'N', 'J', etc.
         :param do_mask: if the target word should be masked during predictions.
         :return: list of top_n predictions

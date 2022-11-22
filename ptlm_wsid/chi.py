@@ -1,6 +1,3 @@
-"""
-A module for inducing senses of target phrases from a set of contexts
-"""
 from typing import Iterator, Tuple, Dict, List, Iterable
 
 from tqdm import tqdm

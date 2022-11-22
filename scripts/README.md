@@ -1,23 +1,22 @@
-# Scripts for running experiments
+To run any of these scripts follow "run as Docker" from the main README and change the last line starting from `ENTRYPOINT` in the `Dockerfile` to point to the respective script.
 
-### Structure
+# Word Sense Induction example
 
-The scripts for running experiments are located in this folder.
+[./wsid_example](./wsid_example.py) -- a small example to induce word / NE senses, see the 12 contexts with `Jaguar` in the script itself. The script does not require any external input, all the necessary data -- small corpus of 12 context -- is included in the script itself. The results are printed to the terminal. For more details see [this blogpost](https://medium.com/@revenkoartem/label-unstructured-data-using-enterprise-knowledge-graphs-2-d84bda281270).
 
--  [wikiner.py](./wikiner.py) -- type (NE class) induction experiment on WikiNer corpus.
--  [chi_example](./chi_example.py) -- a small example of type (NE class) induction on [LER](https://github.com/elenanereiss/Legal-Entity-Recognition) corpus.
-- [wsid_example](./wsid_example.py) -- a small example to induce word / NE senses, see the 12 contexts with `Jaguar` in the script itself.
+# Class Hierarchy Induction example
 
-Configuration files used by some scripts are located in [configs](./configs).
+[./chi_example](./chi_example.py) -- a small example of class (Named Entity type) induction on [LER](https://github.com/elenanereiss/Legal-Entity-Recognition) corpus. The script downloads the LER dataset and is, therefore, self-contained. The results are printed to the terminal. For more details see [this blogpost](TO BE ADDED LATER). 
 
-- `wikiner_*_config.conf` -- configurations to run WikiNer experiments. Description of the variables are provided in the file itself.
-- [logging.conf](./configs/logging.conf) -- configuration of logging.
+# WikiNER experiment
 
-## Run as Docker
+What follows contains step by step instructions to repeat experiments on WikiNER dataset with evaluations. The experiments are describedin further details in [this paper](https://www.researchgate.net/publication/363368922_Learning_Ontology_Classes_from_Text_by_Clustering_Lexical_Substitutes_Derived_from_Language_Models1).
 
-You can use the `Dockerfile` and run the scripts in the docker container. For this `cd` to the root folder where the `Dockerfile` is located and run `docker run -it`. By default it will execute `chi_example.py` script, change the last line in the `Dockerfile` toi run a different script. 
+_____
+Configuration files are located in [./configs](./configs):
+- `./configs/wikiner_*_config.conf` -- configurations to run WikiNer experiments. Description of the variables are provided in the file itself.
+- [./configs/logging.conf](./configs/logging.conf) -- configuration of logging.
 
-## WikiNer experiment
 
 #### to run without linker
 
