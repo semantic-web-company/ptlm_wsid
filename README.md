@@ -5,7 +5,7 @@ The package implements routines using pre-trained language models ([BERT](https:
 
 1. ``` 
    @incollection{revenko2022learning,
-    title={Learning Ontology Classes from Text by Clustering Lexical Substitutes Derived from Language Models 1},
+    title={Learning Ontology Classes from Text by Clustering Lexical Substitutes Derived from Language Models},
     author={Revenko, Artem and Mireles, Victor and Breit, Anna and Bourgonje, Peter and Moreno-Schneider, Julian and Khvalchik, Maria and Rehm, Georg},
     booktitle={Towards a Knowledge-Aware AI},
     pages={155--169},
@@ -41,13 +41,13 @@ You can use the `Dockerfile` and run the scripts in the docker container.
 
 ## Usage
 
-Find examples of usage in [./scripts folder](./scripts).
+Find examples of usage in [./scripts](./scripts) folder.
 
 ### Installing
 
 Easy install with pip from the github repo:
 ```bash
-pip install -e git://github.com/semantic-web-company/ptlm_wsid.git#egg=ptlm_wsid
+pip install git+https://github.com/semantic-web-company/ptlm_wsid.git#egg=ptlm_wsid
 ```
 
 ### License

@@ -28,14 +28,14 @@ Example for English `en`. For German change `en` to `de`.
    1. In [wikiner_en_senses_config.conf]('./configs/wikiner_en_senses_config.conf') set `linker=dummy`, set `conll_data_path` to point to the actual WikiNer corpus in .tsv format.
    2. Run
       ```bash
-      python3 wikiner_senses configs/wikiner_en_senses_config.conf
+      python3 wikiner1_senses configs/wikiner_en_senses_config.conf
       ```
    3. Check the induced sense in `<nes_senses_output_stem>_m<m_value>_k<k_value>.json`, where `*_value` is the respective integer value.  
 3. Induce new types from those senses:
    1. In [wikiner_en_types_config.conf]('./configs/wikiner_en_types_config.conf') set `ners_predictions_path` to the output target file with induced senses that you want to use.
    2. Run 
       ```bash
-      python3 wikiner_new_types configs/wikiner_en_types_config.conf
+      python3 wikiner2_new_types configs/wikiner_en_types_config.conf
       ```
    3. Check the results in at `new_types_output_folder`.
 4. Compute the evaluation results.    

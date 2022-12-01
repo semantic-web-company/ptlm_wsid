@@ -9,7 +9,7 @@ RUN mkdir -p ${NLTK_DATA} && mkdir -p ${SRC_DIR} && mkdir -p ${LOG_DIR} && mkdir
 RUN touch ${LOG_DIR}/log.txt && chmod 777 ${LOG_DIR}/log.txt
 # NLTK, spacy and gunicorn - separate setup
 RUN pip install --no-cache-dir -U pip
-RUN pip install --no-cache-dir nltk spacy
+RUN pip install --no-cache-dir nltk
 RUN python -m nltk.downloader punkt stopwords averaged_perceptron_tagger wordnet omw-1.4 -d $NLTK_DATA
 ENV NLTK_DATA=$NLTK_DATA
 # Other requirements
