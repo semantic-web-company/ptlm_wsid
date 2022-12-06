@@ -6,7 +6,7 @@ To run any of these scripts follow "run as Docker" from the main README and chan
 
 # Class Hierarchy Induction example
 
-[./chi_example](./chi_example.py) -- a small example of class (Named Entity type) induction on [LER](https://github.com/elenanereiss/Legal-Entity-Recognition) corpus. The script downloads the LER dataset and is, therefore, self-contained. The results are printed to the terminal. For more details see [this blogpost](TO BE ADDED LATER). 
+[./chi_example](./chi_example.py) -- a small example of class (Named Entity type) induction on [LER](https://github.com/elenanereiss/Legal-Entity-Recognition) corpus. The script downloads the LER dataset and is, therefore, self-contained. The results are printed to the terminal. For more details see [this blogpost](https://revenkoartem.medium.com/learning-ontology-classes-from-text-14773e61c076). 
 
 # WikiNER experiment
 
