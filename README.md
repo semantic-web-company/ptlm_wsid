@@ -25,7 +25,7 @@ The package implements routines using pre-trained language models ([BERT](https:
     isbn="978-3-030-27684-3"
     }```
 3. https://medium.com/@revenkoartem/label-unstructured-data-using-enterprise-knowledge-graphs-2-d84bda281270
-4. TO BE ADDED LATER
+4. https://revenkoartem.medium.com/learning-ontology-classes-from-text-14773e61c076
 
 #### Used Language Model
 
